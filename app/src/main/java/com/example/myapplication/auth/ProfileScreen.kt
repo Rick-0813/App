@@ -8,6 +8,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,6 +24,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.myapplication.MainViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,6 +33,7 @@ fun ProfileScreen(
     onLogout: () -> Unit,
     onBackToMenu: () -> Unit
 ) {
+    val scope = rememberCoroutineScope()
     val user = viewModel.currentUser
     val applications by viewModel.applications.collectAsState()
     val savedJobIds by viewModel.savedJobIds.collectAsState()
@@ -46,7 +51,8 @@ fun ProfileScreen(
 
     var editName by remember { mutableStateOf(user?.name ?: "") }
     var editEmail by remember { mutableStateOf(user?.email ?: "") }
-    var editPassword by remember { mutableStateOf(user?.password ?: "") }
+    var editPhone by remember { mutableStateOf(user?.phone ?: "") }
+    var editPassword by remember { mutableStateOf("") }
 
     val backgroundBrush = Brush.verticalGradient(
         colors = listOf(Color(0xFFF1F5F9), Color(0xFFE2E8F0))
@@ -61,7 +67,7 @@ fun ProfileScreen(
                 title = { Text("My Profile", fontWeight = FontWeight.Bold, color = darkTextColor) },
                 navigationIcon = {
                     IconButton(onClick = onBackToMenu) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back to Menu", tint = darkTextColor)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to Menu", tint = darkTextColor)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -114,13 +120,22 @@ fun ProfileScreen(
                     color = subTextColor
                 )
 
+                if (!user?.phone.isNullOrBlank()) {
+                    Text(
+                        text = user?.phone ?: "",
+                        fontSize = 14.sp,
+                        color = subTextColor
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedButton(
                     onClick = {
                         editName = user?.name ?: ""
                         editEmail = user?.email ?: ""
-                        editPassword = user?.password ?: ""
+                        editPhone = user?.phone ?: ""
+                        editPassword = ""
                         showEditDialog = true
                     },
                     shape = RoundedCornerShape(20.dp),
@@ -135,6 +150,7 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
+                // 数据卡片
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
@@ -149,17 +165,17 @@ fun ProfileScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = "$appliedCount", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = darkTextColor)
+                            Text(text = appliedCount.toString(), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = darkTextColor)
                             Text(text = "Applied", fontSize = 12.sp, color = subTextColor)
                         }
                         VerticalDivider(modifier = Modifier.height(30.dp).width(1.dp), color = Color(0xFFE2E8F0))
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = "$savedCount", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = darkTextColor)
+                            Text(text = savedCount.toString(), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = darkTextColor)
                             Text(text = "Saved", fontSize = 12.sp, color = subTextColor)
                         }
                         VerticalDivider(modifier = Modifier.height(30.dp).width(1.dp), color = Color(0xFFE2E8F0))
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = "$approvedCount", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF16A34A))
+                            Text(text = approvedCount.toString(), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF16A34A))
                             Text(text = "Approved", fontSize = 12.sp, color = subTextColor)
                         }
                     }
@@ -221,7 +237,7 @@ fun ProfileScreen(
                                 Spacer(modifier = Modifier.width(14.dp))
                                 Text("Terms of Service", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = darkTextColor)
                             }
-                            Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = Color(0xFF94A3B8))
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Color(0xFF94A3B8))
                         }
 
                         HorizontalDivider(color = Color(0xFFF1F5F9))
@@ -239,7 +255,7 @@ fun ProfileScreen(
                                 Spacer(modifier = Modifier.width(14.dp))
                                 Text("Privacy Policy", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = darkTextColor)
                             }
-                            Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = Color(0xFF94A3B8))
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Color(0xFF94A3B8))
                         }
 
                         HorizontalDivider(color = Color(0xFFF1F5F9))
@@ -257,7 +273,7 @@ fun ProfileScreen(
                                 Spacer(modifier = Modifier.width(14.dp))
                                 Text("About JobBoom", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = darkTextColor)
                             }
-                            Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = Color(0xFF94A3B8))
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Color(0xFF94A3B8))
                         }
                     }
                 }
@@ -272,7 +288,7 @@ fun ProfileScreen(
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFDC2626))
                 ) {
-                    Icon(Icons.Default.ExitToApp, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color(0xFFDC2626))
+                    Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color(0xFFDC2626))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Logout", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFDC2626))
                 }
@@ -316,6 +332,16 @@ fun ProfileScreen(
                         Spacer(modifier = Modifier.height(10.dp))
 
                         OutlinedTextField(
+                            value = editPhone,
+                            onValueChange = { editPhone = it },
+                            label = { Text("Phone Number") },
+                            colors = textFieldColors,
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        OutlinedTextField(
                             value = editPassword,
                             onValueChange = { editPassword = it },
                             label = { Text("New Password") },
@@ -329,8 +355,10 @@ fun ProfileScreen(
                 confirmButton = {
                     Button(
                         onClick = {
-                            viewModel.updateUserProfile(editName, editEmail, editPassword)
-                            showEditDialog = false
+                            scope.launch {
+                                viewModel.updateUserProfile(editName, editEmail, editPhone, editPassword)
+                                showEditDialog = false
+                            }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
                     ) {

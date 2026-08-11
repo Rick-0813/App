@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,12 +22,14 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.myapplication.MainViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginRegisterScreen(
     viewModel: MainViewModel,
     onLoginSuccess: () -> Unit
 ) {
+    val scope = rememberCoroutineScope()
     var step by remember { mutableIntStateOf(1) }
 
     var accountInput by remember { mutableStateOf("") }
@@ -144,20 +147,17 @@ fun LoginRegisterScreen(
                             errorMessage = "Please Enter Your Email or Username！"
                         } else {
                             errorMessage = ""
-                            val registeredList = viewModel.registeredUsers.value
-                            val existing = registeredList.find {
-                                it.email.equals(accountInput.trim(), ignoreCase = true) ||
-                                        it.name.equals(accountInput.trim(), ignoreCase = true)
+                            scope.launch {
+                                val existingUser = viewModel.checkUserExists(accountInput.trim())
+                                if (existingUser != null) {
+                                    isNewUser = false
+                                    nameInput = existingUser.name
+                                } else {
+                                    isNewUser = true
+                                    nameInput = accountInput.trim()
+                                }
+                                step = 2
                             }
-
-                            if (existing != null) {
-                                isNewUser = false
-                                nameInput = existing.name
-                            } else {
-                                isNewUser = true
-                                nameInput = accountInput.trim()
-                            }
-                            step = 2
                         }
                     },
                     modifier = Modifier
@@ -188,8 +188,7 @@ fun LoginRegisterScreen(
 
                 OutlinedButton(
                     onClick = {
-                        viewModel.loginUser("Google User", "123456", "Worker")
-                        onLoginSuccess()
+                        // Google 登录逻辑
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -214,8 +213,7 @@ fun LoginRegisterScreen(
 
                 OutlinedButton(
                     onClick = {
-                        viewModel.loginUser("Facebook User", "123456", "Worker")
-                        onLoginSuccess()
+                        // 手机号登录逻辑可以在此扩展
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -225,14 +223,13 @@ fun LoginRegisterScreen(
                     border = BorderStroke(1.dp, borderLight)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "f ",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFF1877F2)
+                        Icon(
+                            imageVector = Icons.Default.Phone,
+                            contentDescription = null,
+                            tint = Color(0xFF16A34A)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Continue use Facebook account", fontSize = 15.sp, color = textDark, fontWeight = FontWeight.Medium)
+                        Text("Continue with Phone Number", fontSize = 15.sp, color = textDark, fontWeight = FontWeight.Medium)
                     }
                 }
             }
@@ -280,20 +277,21 @@ fun LoginRegisterScreen(
                             return@Button
                         }
 
-                        if (isNewUser) {
-                            val regResult = viewModel.registerUser(nameInput, accountInput, passwordInput, "Worker")
-                            regResult.onSuccess {
-                                viewModel.loginUser(accountInput, passwordInput, "Worker")
-                                onLoginSuccess()
-                            }.onFailure {
-                                errorMessage = it.message ?: "Registration failed. Please try again"
-                            }
-                        } else {
-                            val loginResult = viewModel.loginUser(accountInput, passwordInput, "Worker")
-                            loginResult.onSuccess {
-                                onLoginSuccess()
-                            }.onFailure {
-                                errorMessage = it.message ?: "Incorrect password or account not found！"
+                        scope.launch {
+                            if (isNewUser) {
+                                val regResult = viewModel.registerUser(nameInput, accountInput, passwordInput, "Worker")
+                                if (regResult.isSuccess) {
+                                    onLoginSuccess()
+                                } else {
+                                    errorMessage = regResult.exceptionOrNull()?.message ?: "Registration failed."
+                                }
+                            } else {
+                                val loginResult = viewModel.loginUser(accountInput, passwordInput)
+                                if (loginResult.isSuccess) {
+                                    onLoginSuccess()
+                                } else {
+                                    errorMessage = loginResult.exceptionOrNull()?.message ?: "Login failed."
+                                }
                             }
                         }
                     },
