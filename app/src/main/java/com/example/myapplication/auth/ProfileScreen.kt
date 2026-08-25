@@ -1,7 +1,6 @@
 package com.example.myapplication.auth
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -10,7 +9,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,6 +22,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.myapplication.MainViewModel
+import com.example.myapplication.ui.components.CuteInfoDialog
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -40,407 +39,213 @@ fun ProfileScreen(
 
     val userApplications = applications.filter { it.workerName == (user?.name ?: "") }
     val appliedCount = userApplications.size
-    val approvedCount = userApplications.count { it.status == "Approved" }
     val savedCount = savedJobIds.size
 
     var showEditDialog by remember { mutableStateOf(false) }
-    var showAboutDialog by remember { mutableStateOf(false) }
     var showTermsDialog by remember { mutableStateOf(false) }
     var showPrivacyDialog by remember { mutableStateOf(false) }
-    var notificationsEnabled by remember { mutableStateOf(true) }
-
+    
     var editName by remember { mutableStateOf(user?.name ?: "") }
-    var editEmail by remember { mutableStateOf(user?.email ?: "") }
     var editPhone by remember { mutableStateOf(user?.phone ?: "") }
     var editPassword by remember { mutableStateOf("") }
 
+    val primaryPurple = Color(0xFF7E57C2)
+    val darkPurple = Color(0xFF512DA8)
+    val softSurface = Color(0xFFF5F3FF) // 浅紫表面
+
     val backgroundBrush = Brush.verticalGradient(
-        colors = listOf(Color(0xFFF1F5F9), Color(0xFFE2E8F0))
+        colors = listOf(primaryPurple, darkPurple)
     )
 
-    val darkTextColor = Color(0xFF0F172A)
-    val subTextColor = Color(0xFF475569)
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("My Profile", fontWeight = FontWeight.Bold, color = darkTextColor) },
-                navigationIcon = {
-                    IconButton(onClick = onBackToMenu) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to Menu", tint = darkTextColor)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-            )
-        },
-        containerColor = Color.Transparent
-    ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(backgroundBrush)
-                .padding(padding)
-        ) {
+    Box(modifier = Modifier.fillMaxSize().background(backgroundBrush)) {
+        Scaffold(
+            modifier = Modifier.statusBarsPadding(),
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = { Text("My Nest 🏠", fontWeight = FontWeight.Black, color = Color.White) },
+                    navigationIcon = {
+                        IconButton(onClick = onBackToMenu) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = Color.White)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                )
+            }
+        ) { padding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 20.dp)
+                    .padding(padding)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Box(
-                    modifier = Modifier
-                        .size(86.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF2563EB)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = (user?.name ?: "U").take(1).uppercase(),
-                        fontSize = 34.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = user?.name ?: "Guest User",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = darkTextColor
-                )
-
-                Text(
-                    text = user?.email ?: "guest@example.com",
-                    fontSize = 14.sp,
-                    color = subTextColor
-                )
-
-                if (!user?.phone.isNullOrBlank()) {
-                    Text(
-                        text = user?.phone ?: "",
-                        fontSize = 14.sp,
-                        color = subTextColor
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                OutlinedButton(
-                    onClick = {
-                        editName = user?.name ?: ""
-                        editEmail = user?.email ?: ""
-                        editPhone = user?.phone ?: ""
-                        editPassword = ""
-                        showEditDialog = true
-                    },
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier.height(38.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = darkTextColor),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
-                ) {
-                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp), tint = darkTextColor)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Edit Profile & Password", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = darkTextColor)
-                }
-
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // 数据卡片
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                Surface(
+                    modifier = Modifier.size(110.dp),
+                    shape = CircleShape,
+                    color = primaryPurple,
+                    shadowElevation = 8.dp,
+                    border = androidx.compose.foundation.BorderStroke(4.dp, Color.White)
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = appliedCount.toString(), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = darkTextColor)
-                            Text(text = "Applied", fontSize = 12.sp, color = subTextColor)
-                        }
-                        VerticalDivider(modifier = Modifier.height(30.dp).width(1.dp), color = Color(0xFFE2E8F0))
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = savedCount.toString(), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = darkTextColor)
-                            Text(text = "Saved", fontSize = 12.sp, color = subTextColor)
-                        }
-                        VerticalDivider(modifier = Modifier.height(30.dp).width(1.dp), color = Color(0xFFE2E8F0))
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = approvedCount.toString(), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF16A34A))
-                            Text(text = "Approved", fontSize = 12.sp, color = subTextColor)
-                        }
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = (user?.name ?: "U").take(1).uppercase(),
+                            fontSize = 44.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color.White
+                        )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(text = user?.name ?: "Guest", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text(text = user?.email ?: "", fontSize = 14.sp, color = Color.White.copy(alpha = 0.8f))
+                
+                Spacer(modifier = Modifier.height(32.dp))
 
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(modifier = Modifier.padding(vertical = 8.dp)) {
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.AccountBox, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(22.dp))
-                                Spacer(modifier = Modifier.width(14.dp))
-                                Text("Account Role", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = darkTextColor)
-                            }
-                            Text(user?.role ?: "Worker", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
-                        }
-
-                        HorizontalDivider(color = Color(0xFFF1F5F9))
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Notifications, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(22.dp))
-                                Spacer(modifier = Modifier.width(14.dp))
-                                Text("Job Notifications", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = darkTextColor)
-                            }
-                            Switch(checked = notificationsEnabled, onCheckedChange = { notificationsEnabled = it })
-                        }
-
-                        HorizontalDivider(color = Color(0xFFF1F5F9))
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showTermsDialog = true }
-                                .padding(horizontal = 16.dp, vertical = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Gavel, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(22.dp))
-                                Spacer(modifier = Modifier.width(14.dp))
-                                Text("Terms of Service", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = darkTextColor)
-                            }
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Color(0xFF94A3B8))
-                        }
-
-                        HorizontalDivider(color = Color(0xFFF1F5F9))
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showPrivacyDialog = true }
-                                .padding(horizontal = 16.dp, vertical = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Lock, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(22.dp))
-                                Spacer(modifier = Modifier.width(14.dp))
-                                Text("Privacy Policy", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = darkTextColor)
-                            }
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Color(0xFF94A3B8))
-                        }
-
-                        HorizontalDivider(color = Color(0xFFF1F5F9))
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showAboutDialog = true }
-                                .padding(horizontal = 16.dp, vertical = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Info, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(22.dp))
-                                Spacer(modifier = Modifier.width(14.dp))
-                                Text("About JobBoom", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = darkTextColor)
-                            }
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Color(0xFF94A3B8))
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                OutlinedButton(
-                    onClick = onLogout,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFDC2626))
+                        .padding(horizontal = 24.dp),
+                    shape = RoundedCornerShape(32.dp),
+                    colors = CardDefaults.cardColors(containerColor = softSurface), // 换成浅紫色
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color(0xFFDC2626))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Logout", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFDC2626))
+                    Column(modifier = Modifier.padding(24.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            StatsCard("Applied", appliedCount.toString(), Color(0xFFE0E7FF), modifier = Modifier.weight(1f))
+                            StatsCard("Saved", savedCount.toString(), Color(0xFFFEF3C7), modifier = Modifier.weight(1f))
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        ProfileButton("Edit Profile ✨", Icons.Default.Edit, onClick = {
+                            editName = user?.name ?: ""
+                            editPhone = user?.phone ?: ""
+                            showEditDialog = true
+                        })
+
+                        ProfileButton("Terms of Service 📜", Icons.Default.Gavel, onClick = { showTermsDialog = true })
+                        ProfileButton("Privacy Policy 🔐", Icons.Default.Lock, onClick = { showPrivacyDialog = true })
+                        
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = primaryPurple.copy(alpha = 0.1f))
+
+                        ProfileButton("Logout 🚪", Icons.AutoMirrored.Filled.ExitToApp, isDanger = true, onClick = onLogout)
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(40.dp))
             }
         }
-
-        val textFieldColors = OutlinedTextFieldDefaults.colors(
-            focusedTextColor = darkTextColor,
-            unfocusedTextColor = darkTextColor,
-            focusedLabelColor = Color(0xFF2563EB),
-            unfocusedLabelColor = subTextColor
-        )
 
         if (showEditDialog) {
             AlertDialog(
                 onDismissRequest = { showEditDialog = false },
-                containerColor = Color.White,
-                title = { Text("Edit Profile & Password", fontWeight = FontWeight.Bold, color = darkTextColor) },
+                shape = RoundedCornerShape(28.dp),
+                containerColor = softSurface,
+                title = { Text("Update Details 🌈", fontWeight = FontWeight.Black, color = Color(0xFF1E1B4B)) },
                 text = {
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedTextField(
                             value = editName,
                             onValueChange = { editName = it },
-                            label = { Text("Full Name") },
-                            colors = textFieldColors,
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
+                            label = { Text("Name") },
+                            shape = RoundedCornerShape(16.dp),
+                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = primaryPurple)
                         )
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        OutlinedTextField(
-                            value = editEmail,
-                            onValueChange = { editEmail = it },
-                            label = { Text("Email Address") },
-                            colors = textFieldColors,
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
-
                         OutlinedTextField(
                             value = editPhone,
                             onValueChange = { editPhone = it },
-                            label = { Text("Phone Number") },
-                            colors = textFieldColors,
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
+                            label = { Text("Phone") },
+                            shape = RoundedCornerShape(16.dp),
+                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = primaryPurple)
                         )
-                        Spacer(modifier = Modifier.height(10.dp))
-
                         OutlinedTextField(
                             value = editPassword,
                             onValueChange = { editPassword = it },
                             label = { Text("New Password") },
-                            colors = textFieldColors,
                             visualTransformation = PasswordVisualTransformation(),
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
+                            shape = RoundedCornerShape(16.dp),
+                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = primaryPurple)
                         )
                     }
                 },
                 confirmButton = {
-                    Button(
+                    TextButton(
                         onClick = {
                             scope.launch {
-                                viewModel.updateUserProfile(editName, editEmail, editPhone, editPassword)
+                                viewModel.updateUserProfile(editName, user?.email ?: "", editPhone, editPassword)
                                 showEditDialog = false
                             }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
-                    ) {
-                        Text("Save Changes", color = Color.White)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showEditDialog = false }) {
-                        Text("Cancel", color = subTextColor)
-                    }
-                }
-            )
-        }
-
-        if (showAboutDialog) {
-            AlertDialog(
-                onDismissRequest = { showAboutDialog = false },
-                containerColor = Color.White,
-                title = { Text("About JobBoom", fontWeight = FontWeight.Bold, color = darkTextColor) },
-                text = {
-                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                        Text("Origin & Mission", fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text("JobBoom was created to bridge the gap between flexible job seekers and local employers in need of trusted talent.", fontSize = 13.sp, color = darkTextColor)
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text("Why We Built JobBoom?", fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text("1. Empower Workers: Find flexible jobs easily.\n2. Support Employers: Post jobs and hire fast.", fontSize = 13.sp, color = darkTextColor)
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = { showAboutDialog = false }) {
-                        Text("Got it", fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
-                    }
+                        }
+                    ) { Text("Save Changes ✨", fontWeight = FontWeight.Bold, color = primaryPurple) }
                 }
             )
         }
 
         if (showTermsDialog) {
-            AlertDialog(
-                onDismissRequest = { showTermsDialog = false },
-                containerColor = Color.White,
-                title = { Text("Terms of Service", fontWeight = FontWeight.Bold, color = darkTextColor) },
-                text = {
-                    Text(
-                        "Users must provide accurate information. Fraudulent activities are strictly prohibited on JobBoom.",
-                        fontSize = 14.sp,
-                        color = darkTextColor
-                    )
-                },
-                confirmButton = {
-                    Button(
-                        onClick = { showTermsDialog = false },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
-                    ) {
-                        Text("I Agree", color = Color.White)
-                    }
-                }
+            CuteInfoDialog(
+                title = "Terms of Service 📜",
+                content = "By using JobBoom, you agree to treat everyone with respect and provide honest info. Let's grow together!",
+                onDismiss = { showTermsDialog = false }
             )
         }
 
         if (showPrivacyDialog) {
-            AlertDialog(
-                onDismissRequest = { showPrivacyDialog = false },
-                containerColor = Color.White,
-                title = { Text("Privacy Policy", fontWeight = FontWeight.Bold, color = darkTextColor) },
-                text = {
-                    Text(
-                        "Your information is strictly protected and used exclusively for job matching purposes on JobBoom.",
-                        fontSize = 14.sp,
-                        color = darkTextColor
-                    )
-                },
-                confirmButton = {
-                    Button(
-                        onClick = { showPrivacyDialog = false },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
-                    ) {
-                        Text("Understood", color = Color.White)
-                    }
-                }
+            CuteInfoDialog(
+                title = "Privacy Policy 🔐",
+                content = "We value your trust! Your data is protected and used only to find your dream jobs. Magic secrets stay safe.",
+                onDismiss = { showPrivacyDialog = false }
             )
+        }
+    }
+}
+
+@Composable
+fun StatsCard(label: String, value: String, color: Color, modifier: Modifier) {
+    Surface(
+        modifier = modifier,
+        color = color,
+        shape = RoundedCornerShape(20.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(text = value, fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color(0xFF1E1B4B))
+            Text(text = label, fontSize = 12.sp, color = Color(0xFF4B5563))
+        }
+    }
+}
+
+@Composable
+fun ProfileButton(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, isDanger: Boolean = false, onClick: () -> Unit) {
+    TextButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().height(56.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.textButtonColors(containerColor = Color.Transparent)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Surface(
+                modifier = Modifier.size(36.dp),
+                shape = CircleShape,
+                color = if (isDanger) Color(0xFFFFE4E6) else Color(0xFFEDE9FE)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(icon, contentDescription = null, tint = if (isDanger) Color.Red else Color(0xFF7E57C2), modifier = Modifier.size(18.dp))
+                }
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(text, color = if (isDanger) Color.Red else Color(0xFF1E1B4B), fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+            Spacer(modifier = Modifier.weight(1f))
+            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color(0xFF9CA3AF), modifier = Modifier.size(16.dp))
         }
     }
 }

@@ -1,10 +1,10 @@
 package com.example.myapplication.worker
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -29,417 +30,234 @@ fun JobSearchScreen(viewModel: MainViewModel, navController: NavController) {
     val applications by viewModel.applications.collectAsState()
 
     var searchQuery by remember { mutableStateOf("") }
-    var showSearchField by remember { mutableStateOf(false) }
     var currentBottomTab by remember { mutableIntStateOf(0) }
 
-    var selectedCategory by remember { mutableStateOf("All Jobs") }
-    var showCategoryDropdown by remember { mutableStateOf(false) }
-    var recommendTab by remember { mutableIntStateOf(0) }
-    var selectedLocation by remember { mutableStateOf("Kuala Lumpur") }
-    var showLocationDialog by remember { mutableStateOf(false) }
-    var showFilterDialog by remember { mutableStateOf(false) }
+    val primaryPurple = Color(0xFF7E57C2)
+    val darkPurple = Color(0xFF512DA8)
+    val softSurface = Color(0xFFF5F3FF) // 统一的浅紫表面色
+    val textDark = Color(0xFF1E1B4B)
 
-    var selectedJobType by remember { mutableStateOf("All") } 
+    val backgroundBrush = Brush.verticalGradient(
+        colors = listOf(primaryPurple, darkPurple)
+    )
 
-    val filteredJobs = jobs.filter { job ->
-        val matchesCategory = if (selectedCategory == "All Jobs") true else job.title.contains(selectedCategory, ignoreCase = true)
-        val matchesSearch = job.title.contains(searchQuery, ignoreCase = true) || job.company.contains(searchQuery, ignoreCase = true)
-        val matchesType = if (selectedJobType == "All") true else job.description.contains(selectedJobType, ignoreCase = true)
-        matchesCategory && matchesSearch && matchesType
-    }
-
-    val darkTextColor = Color(0xFF0F172A)
-
-    Scaffold(
-        topBar = {
-            Surface(
-                color = Color.White,
-                shadowElevation = 2.dp
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
+    Box(modifier = Modifier.fillMaxSize().background(backgroundBrush)) {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                Surface(
+                    color = softSurface.copy(alpha = 0.95f),
+                    shadowElevation = 8.dp,
+                    shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
+                    Column(modifier = Modifier.statusBarsPadding().padding(20.dp)) {
                         Row(
+                            modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.clickable { showCategoryDropdown = true }
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(
-                                text = selectedCategory,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = darkTextColor
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Column {
+                                Text("Discovery 🌟", fontSize = 24.sp, fontWeight = FontWeight.Black, color = primaryPurple)
+                                Text("Find your dream job", fontSize = 12.sp, color = primaryPurple.copy(alpha = 0.6f))
+                            }
                             Surface(
-                                color = Color(0xFFE0F2FE),
-                                shape = RoundedCornerShape(6.dp)
+                                onClick = { navController.navigate("worker_profile") },
+                                shape = CircleShape,
+                                color = primaryPurple,
+                                shadowElevation = 4.dp
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text("Full-time", fontSize = 11.sp, color = Color(0xFF0284C7), fontWeight = FontWeight.Bold)
-                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color(0xFF0284C7), modifier = Modifier.size(16.dp))
+                                Box(modifier = Modifier.size(44.dp), contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.Person, contentDescription = null, tint = Color.White)
                                 }
                             }
                         }
-
-                        DropdownMenu(
-                            expanded = showCategoryDropdown,
-                            onDismissRequest = { showCategoryDropdown = false }
-                        ) {
-                            listOf("All Jobs", "Software", "Manager", "Designer", "Helper", "Cashier").forEach { category ->
-                                DropdownMenuItem(
-                                    text = { Text(category, fontWeight = FontWeight.Medium) },
-                                    onClick = {
-                                        selectedCategory = category
-                                        showCategoryDropdown = false
-                                    }
-                                )
-                            }
-                        }
-
-                        IconButton(onClick = { showSearchField = !showSearchField }) {
-                            Icon(Icons.Default.Search, contentDescription = "Search", tint = darkTextColor)
-                        }
-                    }
-
-                    if (showSearchField) {
+                        Spacer(modifier = Modifier.height(16.dp))
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
-                            placeholder = { Text("Search title, company...") },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 6.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true
+                            placeholder = { Text("Search...", color = primaryPurple.copy(alpha = 0.4f)) },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = primaryPurple) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(20.dp),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = primaryPurple,
+                                unfocusedBorderColor = Color(0xFFDED9FF),
+                                focusedContainerColor = Color.White.copy(alpha = 0.5f),
+                                unfocusedContainerColor = Color.White.copy(alpha = 0.5f),
+                                focusedTextColor = textDark
+                            )
                         )
                     }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(Color(0xFFF1F5F9))
-                                .padding(3.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(if (recommendTab == 0) Color.White else Color.Transparent)
-                                    .clickable { recommendTab = 0 }
-                                    .padding(horizontal = 12.dp, vertical = 6.dp)
-                            ) {
-                                Text(
-                                    text = "Recommended for You",
-                                    fontSize = 12.sp,
-                                    fontWeight = if (recommendTab == 0) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (recommendTab == 0) darkTextColor else Color(0xFF64748B)
-                                )
-                            }
-
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(if (recommendTab == 1) Color.White else Color.Transparent)
-                                    .clickable { recommendTab = 1 }
-                                    .padding(horizontal = 12.dp, vertical = 6.dp)
-                            ) {
-                                Text(
-                                    text = "news",
-                                    fontSize = 12.sp,
-                                    fontWeight = if (recommendTab == 1) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (recommendTab == 1) darkTextColor else Color(0xFF64748B)
-                                )
-                            }
-                        }
-
-                        Row(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(Color(0xFFF8FAFC))
-                                .clickable { showLocationDialog = true }
-                                .padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.LocationOn,
-                                contentDescription = null,
-                                tint = Color(0xFF2563EB),
-                                modifier = Modifier.size(15.dp)
+                }
+            },
+            bottomBar = {
+                NavigationBar(
+                    containerColor = softSurface,
+                    tonalElevation = 8.dp,
+                    modifier = Modifier.clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+                ) {
+                    listOf(
+                        Triple(0, "Jobs", Icons.Default.Work),
+                        Triple(1, "Saved", Icons.Default.Bookmark),
+                        Triple(2, "Apps", Icons.AutoMirrored.Filled.Assignment)
+                    ).forEach { (idx, label, icon) ->
+                        NavigationBarItem(
+                            selected = currentBottomTab == idx,
+                            onClick = { currentBottomTab = idx },
+                            icon = { Icon(icon, contentDescription = null) },
+                            label = { Text(label, fontWeight = FontWeight.Bold) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = primaryPurple,
+                                indicatorColor = Color(0xFFDED9FF)
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = selectedLocation,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color(0xFF334155)
-                            )
-                        }
-
-                        IconButton(
-                            onClick = { showFilterDialog = true },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.FilterList,
-                                contentDescription = "Requirements Filter",
-                                tint = darkTextColor
-                            )
-                        }
+                        )
                     }
                 }
             }
-        },
-        bottomBar = {
-            NavigationBar(
-                containerColor = Color.White,
-                tonalElevation = 8.dp
-            ) {
-                NavigationBarItem(
-                    selected = currentBottomTab == 0,
-                    onClick = { currentBottomTab = 0 },
-                    icon = { Icon(Icons.Default.Work, contentDescription = null) },
-                    label = { Text("Find Jobs", fontSize = 11.sp) }
-                )
-
-                NavigationBarItem(
-                    selected = currentBottomTab == 1,
-                    onClick = { currentBottomTab = 1 },
-                    icon = { Icon(Icons.Default.Bookmark, contentDescription = null) },
-                    label = { Text("Saved", fontSize = 11.sp) }
-                )
-
-                NavigationBarItem(
-                    selected = currentBottomTab == 2,
-                    onClick = { currentBottomTab = 2 },
-                    icon = { Icon(Icons.AutoMirrored.Filled.Assignment, contentDescription = null) },
-                    label = { Text("Applications", fontSize = 11.sp) }
-                )
-
-                NavigationBarItem(
-                    selected = false,
-                    onClick = { navController.navigate("worker_profile") },
-                    icon = { Icon(Icons.Default.Person, contentDescription = null) },
-                    label = { Text("Profile", fontSize = 11.sp) }
-                )
+        ) { padding ->
+            Box(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp)) {
+                when (currentBottomTab) {
+                    0 -> JobTab(jobs, savedJobIds, searchQuery, viewModel)
+                    1 -> SavedTab(jobs, savedJobIds, viewModel)
+                    2 -> AppsTab(applications, jobs, viewModel)
+                }
             }
         }
-    ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+    }
+}
+
+@Composable
+fun JobTab(jobs: List<com.example.myapplication.Job>, savedIds: Set<Int>, query: String, viewModel: MainViewModel) {
+    val filtered = jobs.filter { it.title.contains(query, true) || it.company.contains(query, true) }
+    
+    if (filtered.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("No jobs found 🧸", color = Color.White, fontWeight = FontWeight.Bold)
+        }
+    } else {
+        LazyColumn(
+            contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            when (currentBottomTab) {
-                0 -> {
-                    if (filteredJobs.isEmpty()) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("No jobs match your selected filters.", color = Color.Gray)
-                        }
-                    } else {
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            items(filteredJobs) { job ->
-                                val isSaved = savedJobIds.contains(job.id)
+            items(filtered) { job ->
+                JobCard(job, savedIds.contains(job.id), viewModel)
+            }
+        }
+    }
+}
 
-                                Card(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(16.dp),
-                                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                                    elevation = CardDefaults.cardElevation(2.dp)
-                                ) {
-                                    Column(modifier = Modifier.padding(16.dp)) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Column {
-                                                Text(text = job.title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = darkTextColor)
-                                                Text(text = job.company, color = Color(0xFF64748B), fontSize = 14.sp)
-                                            }
-                                            IconButton(onClick = { viewModel.toggleSaveJob(job.id) }) {
-                                                Icon(
-                                                    imageVector = if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                                    contentDescription = null,
-                                                    tint = if (isSaved) Color.Red else Color.Gray
-                                                )
-                                            }
-                                        }
-
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        Text(text = job.salary, color = Color(0xFF16A34A), fontWeight = FontWeight.Bold)
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        Text(text = job.description, color = Color(0xFF475569), fontSize = 13.sp)
-                                        Spacer(modifier = Modifier.height(12.dp))
-
-                                        Button(
-                                            onClick = { viewModel.applyForJob(job.id) },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            shape = RoundedCornerShape(10.dp),
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
-                                        ) {
-                                            Text("Apply Now", fontWeight = FontWeight.Bold)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+@Composable
+fun JobCard(job: com.example.myapplication.Job, isSaved: Boolean, viewModel: MainViewModel) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F3FF)), // 浅紫色卡片
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(job.title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E1B4B))
+                    Text(job.company, fontSize = 14.sp, color = Color(0xFF7E57C2))
                 }
-
-                1 -> {
-                    val savedJobs = jobs.filter { savedJobIds.contains(it.id) }
-                    Column {
-                        Text("Saved Jobs (${savedJobs.size})", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = darkTextColor)
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        if (savedJobs.isEmpty()) {
-                            Text("No saved jobs yet.", color = Color.Gray)
-                        } else {
-                            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                items(savedJobs) { job ->
-                                    Card(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        shape = RoundedCornerShape(16.dp),
-                                        colors = CardDefaults.cardColors(containerColor = Color.White)
-                                    ) {
-                                        Column(modifier = Modifier.padding(16.dp)) {
-                                            Text(text = job.title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = darkTextColor)
-                                            Text(text = job.company, color = Color(0xFF64748B))
-                                            Text(text = job.salary, color = Color(0xFF16A34A), fontWeight = FontWeight.Bold)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                IconButton(onClick = { viewModel.toggleSaveJob(job.id) }) {
+                    Icon(
+                        if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = null,
+                        tint = if (isSaved) Color.Red else Color(0xFF7E57C2)
+                    )
                 }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(color = Color(0xFFDCFCE7), shape = RoundedCornerShape(8.dp)) {
+                    Text(job.salary, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = Color(0xFF16A34A), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Surface(color = Color(0xFFE0E7FF), shape = RoundedCornerShape(8.dp)) {
+                    Text("Full-time", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = Color(0xFF4338CA), fontSize = 12.sp)
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = { viewModel.applyForJob(job.id) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7E57C2))
+            ) {
+                Text("Apply Now ✨", fontWeight = FontWeight.Bold, color = Color.White)
+            }
+        }
+    }
+}
 
-                2 -> {
-                    val activeWorkerName = viewModel.currentUser?.name ?: ""
-                    val myApps = applications.filter { it.workerName == activeWorkerName }
+@Composable
+fun SavedTab(jobs: List<com.example.myapplication.Job>, savedIds: Set<Int>, viewModel: MainViewModel) {
+    val saved = jobs.filter { savedIds.contains(it.id) }
+    Column(modifier = Modifier.padding(top = 16.dp)) {
+        Text("Saved for Later 💖", fontSize = 22.sp, fontWeight = FontWeight.Black, color = Color.White)
+        Spacer(modifier = Modifier.height(16.dp))
+        if (saved.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Your list is empty 🧺", color = Color.White.copy(alpha = 0.7f))
+            }
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                items(saved) { job -> JobCard(job, true, viewModel) }
+            }
+        }
+    }
+}
 
-                    Column {
-                        Text("My Applications (${myApps.size})", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = darkTextColor)
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        if (myApps.isEmpty()) {
-                            Text("You haven't applied for any jobs yet.", color = Color.Gray)
-                        } else {
-                            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                items(myApps) { app ->
-                                    val jobTitle = jobs.find { it.id == app.jobId }?.title ?: "Job"
-                                    Card(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        shape = RoundedCornerShape(16.dp),
-                                        colors = CardDefaults.cardColors(containerColor = Color.White)
-                                    ) {
-                                        Column(modifier = Modifier.padding(16.dp)) {
-                                            Text(text = "Job: $jobTitle", fontWeight = FontWeight.Bold, color = darkTextColor)
-                                            Text(
-                                                text = "Status: ${app.status}",
-                                                color = when(app.status) {
-                                                    "Approved" -> Color(0xFF16A34A)
-                                                    "Rejected" -> Color.Red
-                                                    else -> Color(0xFFEAB308)
-                                                },
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
+@Composable
+fun AppsTab(apps: List<com.example.myapplication.JobApplication>, jobs: List<com.example.myapplication.Job>, viewModel: MainViewModel) {
+    val myApps = apps.filter { it.workerEmail == viewModel.currentUser?.email }
+    Column(modifier = Modifier.padding(top = 16.dp)) {
+        Text("My Journey 🌈", fontSize = 22.sp, fontWeight = FontWeight.Black, color = Color.White)
+        Spacer(modifier = Modifier.height(16.dp))
+        if (myApps.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("No applications yet 🎈", color = Color.White.copy(alpha = 0.7f))
+            }
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(myApps) { app ->
+                    val job = jobs.find { it.id == app.jobId }
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F3FF))
+                    ) {
+                        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(job?.title ?: "Job", fontWeight = FontWeight.Bold, color = Color(0xFF1E1B4B))
+                                Text(job?.company ?: "Company", fontSize = 12.sp, color = Color(0xFF7E57C2))
+                            }
+                            Surface(
+                                color = when(app.status) {
+                                    "Approved" -> Color(0xFFDCFCE7)
+                                    "Rejected" -> Color(0xFFFEE2E2)
+                                    else -> Color(0xFFFEF9C3)
+                                },
+                                shape = CircleShape
+                            ) {
+                                Text(
+                                    app.status,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = when(app.status) {
+                                        "Approved" -> Color(0xFF16A34A)
+                                        "Rejected" -> Color.Red
+                                        else -> Color(0xFF854D0E)
                                     }
-                                }
+                                )
                             }
                         }
                     }
                 }
             }
-        }
-
-        if (showLocationDialog) {
-            AlertDialog(
-                onDismissRequest = { showLocationDialog = false },
-                title = { Text("Select Location", fontWeight = FontWeight.Bold) },
-                text = {
-                    Column {
-                        listOf("Kuala Lumpur", "Johor Bahru", "Penang", "Selangor", "All Regions").forEach { location ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        selectedLocation = location
-                                        showLocationDialog = false
-                                    }
-                                    .padding(vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(text = location, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                            }
-                        }
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = { showLocationDialog = false }) {
-                        Text("Cancel")
-                    }
-                }
-            )
-        }
-
-        if (showFilterDialog) {
-            AlertDialog(
-                onDismissRequest = { showFilterDialog = false },
-                title = { Text("Filter Requirements", fontWeight = FontWeight.Bold) },
-                text = {
-                    Column {
-                        Text("Job Type", fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
-                        Spacer(modifier = Modifier.height(6.dp))
-                        listOf("All", "Full-time", "Part-time").forEach { type ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { selectedJobType = type }
-                                    .padding(vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = selectedJobType == type,
-                                    onClick = { selectedJobType = type }
-                                )
-                                Text(text = type, fontSize = 14.sp)
-                            }
-                        }
-                    }
-                },
-                confirmButton = {
-                    Button(onClick = { showFilterDialog = false }) {
-                        Text("Apply Filter")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showFilterDialog = false }) {
-                        Text("Reset")
-                    }
-                }
-            )
         }
     }
 }
