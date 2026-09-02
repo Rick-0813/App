@@ -17,6 +17,7 @@ import androidx.navigation.navArgument
 import com.example.myapplication.auth.LoginRegisterScreen
 import com.example.myapplication.auth.ProfileScreen
 import com.example.myapplication.auth.RoleSelectionScreen
+import com.example.myapplication.employer.CompanyDetailsScreen
 import com.example.myapplication.employer.EmployerScreen
 import com.example.myapplication.myfeature.MyJobDetailsScreen
 import com.example.myapplication.worker.JobSearchScreen
@@ -68,6 +69,7 @@ fun AppNavigation() {
             EmployerScreen(viewModel = sharedViewModel, navController = navController)
         }
 
+<<<<<<< Updated upstream
         composable(
             route = "job_details/{jobId}/{applicationId}",
             arguments = listOf(
@@ -81,6 +83,10 @@ fun AppNavigation() {
                 applicationId = backStackEntry.arguments?.getInt("applicationId") ?: -1,
                 onBack = { navController.popBackStack() }
             )
+=======
+        composable(route = "company_details") {
+            CompanyDetailsScreen(viewModel = sharedViewModel, navController = navController)
+>>>>>>> Stashed changes
         }
 
         composable(route = "worker_profile") {

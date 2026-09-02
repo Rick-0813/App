@@ -1,5 +1,6 @@
 package com.example.myapplication.employer
 
+import android.R.attr.onClick
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,7 +31,7 @@ fun EmployerScreen(viewModel: MainViewModel, navController: NavController) {
     val jobs by viewModel.jobs.collectAsState()
 
     var currentBottomTab by remember { mutableIntStateOf(0) }
-    
+
     val primaryPurple = Color(0xFF7E57C2)
     val darkPurple = Color(0xFF512DA8)
     val softSurface = Color(0xFFF5F3FF) // 统一浅紫色
@@ -53,6 +54,10 @@ fun EmployerScreen(viewModel: MainViewModel, navController: NavController) {
                         title = { Text("Boss Panel 👑", fontWeight = FontWeight.Black, color = primaryPurple) },
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                         actions = {
+                            IconButton(onClick = { navController.navigate("company_details") }) {
+                                Icon(Icons.Default.Business, contentDescription = "Company Details", tint = primaryPurple)
+                            }
+
                             IconButton(onClick = { navController.navigate("worker_profile") }) {
                                 Icon(Icons.Default.AccountCircle, contentDescription = null, tint = primaryPurple)
                             }
@@ -129,8 +134,13 @@ fun ManageAppsTab(
     Column(modifier = Modifier.padding(top = 16.dp)) {
         Text(title, fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color.White)
         Spacer(modifier = Modifier.height(16.dp))
+<<<<<<< Updated upstream
         
         if (visibleApps.isEmpty()) {
+=======
+
+        if (apps.isEmpty()) {
+>>>>>>> Stashed changes
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
                     if (completedOnly) "No completed workers to review yet" else "No applications yet 🧸",
@@ -150,9 +160,9 @@ fun ManageAppsTab(
                         Column(modifier = Modifier.padding(20.dp)) {
                             Text(text = app.workerName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E1B4B))
                             Text(text = "Wants to be a $jobTitle", fontSize = 14.sp, color = Color(0xFF7E57C2))
-                            
+
                             Spacer(modifier = Modifier.height(16.dp))
-                            
+
                             if (app.status == "Pending") {
                                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Button(
@@ -161,7 +171,7 @@ fun ManageAppsTab(
                                         shape = RoundedCornerShape(12.dp),
                                         modifier = Modifier.weight(1f)
                                     ) { Text("Approve ✅") }
-                                    
+
                                     Button(
                                         onClick = { viewModel.updateApplicationStatus(app.id, "Rejected") },
                                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
@@ -243,49 +253,96 @@ fun ManageAppsTab(
 @Composable
 fun PostJobTab(viewModel: MainViewModel) {
     var title by remember { mutableStateOf("") }
+    var company by remember { mutableStateOf("") }
     var salary by remember { mutableStateOf("") }
-    
+    var description by remember { mutableStateOf("") }
+    var showSuccess by remember { mutableStateOf(false) }
+
+    val primaryPurple = Color(0xFF7E57C2)
+
     Column(modifier = Modifier.padding(top = 16.dp)) {
         Text("Create magic post 🪄", fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color.White)
         Spacer(modifier = Modifier.height(24.dp))
-        
+
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F3FF))
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
+
+                if (showSuccess) {
+                    Surface(
+                        color = Color(0xFFDCFCE7),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                    ) {
+                        Text(
+                            text = "Job Posted Successfully! 🎉",
+                            color = Color(0xFF16A34A),
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+                }
+
                 OutlinedTextField(
                     value = title,
-                    onValueChange = { title = it },
-                    label = { Text("What job is this?") },
+                    onValueChange = { title = it; showSuccess = false },
+                    label = { Text("Job Title (e.g. Software Engineer)") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF7E57C2))
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = primaryPurple)
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = company,
+                    onValueChange = { company = it; showSuccess = false },
+                    label = { Text("Company Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = primaryPurple)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
                 OutlinedTextField(
                     value = salary,
-                    onValueChange = { salary = it },
-                    label = { Text("How much will you pay?") },
+                    onValueChange = { salary = it; showSuccess = false },
+                    label = { Text("Salary (e.g. RM 4,500 / Month)") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF7E57C2))
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = primaryPurple)
                 )
-                
-                Spacer(modifier = Modifier.height(32.dp))
-                
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it; showSuccess = false },
+                    label = { Text("Job Description & Requirements") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = primaryPurple)
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
                 Button(
                     onClick = {
-                        if (title.isNotBlank()) {
-                            viewModel.postJob(title, "Your Company", salary, "Modern workspace with great vibes.")
+                        if (title.isNotBlank() && company.isNotBlank() && salary.isNotBlank()) {
+                            viewModel.postJob(title, company, salary, description)
                             title = ""
+                            company = ""
                             salary = ""
+                            description = ""
+                            showSuccess = true
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(20.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7E57C2))
+                    colors = ButtonDefaults.buttonColors(containerColor = primaryPurple),
+                    enabled = title.isNotBlank() && company.isNotBlank()
                 ) {
                     Text("Publish Now 🚀", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
                 }
