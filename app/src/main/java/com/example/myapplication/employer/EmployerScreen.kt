@@ -1,6 +1,5 @@
 package com.example.myapplication.employer
 
-import android.R.attr.onClick
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,6 +22,10 @@ import androidx.navigation.NavController
 import com.example.myapplication.MainViewModel
 import com.example.myapplication.ReviewDirection
 import com.example.myapplication.myfeature.EmployerReviewWorkerDialog
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.input.KeyboardType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,7 +37,7 @@ fun EmployerScreen(viewModel: MainViewModel, navController: NavController) {
 
     val primaryPurple = Color(0xFF7E57C2)
     val darkPurple = Color(0xFF512DA8)
-    val softSurface = Color(0xFFF5F3FF) // 统一浅紫色
+    val softSurface = Color(0xFFF5F3FF)
 
     val backgroundBrush = Brush.verticalGradient(
         colors = listOf(primaryPurple, darkPurple)
@@ -54,6 +57,7 @@ fun EmployerScreen(viewModel: MainViewModel, navController: NavController) {
                         title = { Text("Boss Panel 👑", fontWeight = FontWeight.Black, color = primaryPurple) },
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                         actions = {
+                            // Your assigned button to view company details
                             IconButton(onClick = { navController.navigate("company_details") }) {
                                 Icon(Icons.Default.Business, contentDescription = "Company Details", tint = primaryPurple)
                             }
@@ -99,7 +103,7 @@ fun EmployerScreen(viewModel: MainViewModel, navController: NavController) {
                     0 -> ManageAppsTab(applications, jobs, viewModel) { jobId, applicationId ->
                         navController.navigate("job_details/$jobId/$applicationId")
                     }
-                    1 -> PostJobTab(viewModel)
+                    1 -> PostJobTab(viewModel) // Your assigned tab feature
                     2 -> ManageAppsTab(
                         apps = applications,
                         jobs = jobs,
@@ -134,13 +138,8 @@ fun ManageAppsTab(
     Column(modifier = Modifier.padding(top = 16.dp)) {
         Text(title, fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color.White)
         Spacer(modifier = Modifier.height(16.dp))
-<<<<<<< Updated upstream
-        
-        if (visibleApps.isEmpty()) {
-=======
 
-        if (apps.isEmpty()) {
->>>>>>> Stashed changes
+        if (visibleApps.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
                     if (completedOnly) "No completed workers to review yet" else "No applications yet 🧸",
@@ -208,7 +207,7 @@ fun ManageAppsTab(
                                 if (app.status == "Completed") {
                                     val alreadyReviewed = reviews.any {
                                         it.applicationId == app.id &&
-                                            it.direction == ReviewDirection.EMPLOYER_TO_WORKER
+                                                it.direction == ReviewDirection.EMPLOYER_TO_WORKER
                                     }
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Button(
@@ -252,15 +251,25 @@ fun ManageAppsTab(
 
 @Composable
 fun PostJobTab(viewModel: MainViewModel) {
+    var requirements by remember { mutableStateOf("") }
+    val jobs by viewModel.jobs.collectAsState()
+    val currentUser = viewModel.currentUser
+
     var title by remember { mutableStateOf("") }
     var company by remember { mutableStateOf("") }
-    var salary by remember { mutableStateOf("") }
+    var rawSalary by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
+    var jobType by remember { mutableStateOf("Full-time") }
     var showSuccess by remember { mutableStateOf(false) }
 
     val primaryPurple = Color(0xFF7E57C2)
+    val myPostedJobs = jobs.filter { it.employerEmail == currentUser?.email }
 
-    Column(modifier = Modifier.padding(top = 16.dp)) {
+    Column(
+        modifier = Modifier
+            .padding(top = 16.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
         Text("Create magic post 🪄", fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color.White)
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -286,13 +295,29 @@ fun PostJobTab(viewModel: MainViewModel) {
                     }
                 }
 
+                // Job Type Toggle
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    FilterChip(
+                        selected = jobType == "Full-time",
+                        onClick = { jobType = "Full-time" },
+                        label = { Text("Full-time") },
+                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = primaryPurple, selectedLabelColor = Color.White)
+                    )
+                    FilterChip(
+                        selected = jobType == "Part-time",
+                        onClick = { jobType = "Part-time" },
+                        label = { Text("Part-time") },
+                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = primaryPurple, selectedLabelColor = Color.White)
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it; showSuccess = false },
-                    label = { Text("Job Title (e.g. Software Engineer)") },
+                    label = { Text("Job Title") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = primaryPurple)
+                    shape = RoundedCornerShape(16.dp)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -301,52 +326,98 @@ fun PostJobTab(viewModel: MainViewModel) {
                     onValueChange = { company = it; showSuccess = false },
                     label = { Text("Company Name") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = primaryPurple)
+                    shape = RoundedCornerShape(16.dp)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedTextField(
-                    value = salary,
-                    onValueChange = { salary = it; showSuccess = false },
-                    label = { Text("Salary (e.g. RM 4,500 / Month)") },
+                    value = rawSalary,
+                    onValueChange = { input ->
+                        // Only allow numbers
+                        if (input.all { it.isDigit() }) {
+                            rawSalary = input
+                            showSuccess = false
+                        }
+                    },
+                    label = { Text("Salary Amount (Numbers Only)") },
+                    leadingIcon = { Text("RM ", modifier = Modifier.padding(start = 16.dp), fontWeight = FontWeight.Bold) },
+                    trailingIcon = { Text(".00", modifier = Modifier.padding(end = 16.dp)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = primaryPurple)
+                    shape = RoundedCornerShape(16.dp)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it; showSuccess = false },
-                    label = { Text("Job Description & Requirements") },
+                    label = { Text("Job Description") },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = primaryPurple)
+                    shape = RoundedCornerShape(16.dp)
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
+                OutlinedTextField(
+                    value = requirements,
+                    onValueChange = { requirements = it; showSuccess = false },
+                    label = { Text("Job Requirements (Enter each on a new line)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
+                    shape = RoundedCornerShape(16.dp)
+                )
 
                 Button(
                     onClick = {
-                        if (title.isNotBlank() && company.isNotBlank() && salary.isNotBlank()) {
-                            viewModel.postJob(title, company, salary, description)
+                        if (title.isNotBlank() && company.isNotBlank() && rawSalary.isNotBlank()) {
+                            val formattedSalary = "RM $rawSalary.00"
+                            viewModel.postJob(title, company, formattedSalary, description, jobType, requirements)
                             title = ""
                             company = ""
-                            salary = ""
+                            rawSalary = ""
                             description = ""
+                            requirements = ""
                             showSuccess = true
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(20.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = primaryPurple),
-                    enabled = title.isNotBlank() && company.isNotBlank()
+                    enabled = title.isNotBlank() && company.isNotBlank() && rawSalary.isNotBlank()
                 ) {
                     Text("Publish Now 🚀", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
                 }
             }
         }
+
+        // Manage/Delete Created Jobs
+        if (myPostedJobs.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(32.dp))
+            Text("Manage Active Listings", fontSize = 18.sp, fontWeight = FontWeight.Black, color = Color.White)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            myPostedJobs.forEach { job ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(job.title, fontWeight = FontWeight.Bold, color = Color(0xFF1E1B4B))
+                            Text("${job.type} • ${job.salary}", fontSize = 12.sp, color = Color.Gray)
+                        }
+                        IconButton(onClick = { viewModel.deleteJob(job.id) }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete Job", tint = Color.Red)
+                        }
+                    }
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }

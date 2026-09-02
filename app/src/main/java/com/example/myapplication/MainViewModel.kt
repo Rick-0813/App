@@ -1,5 +1,6 @@
 package com.example.myapplication
 
+import android.R.attr.type
 import android.app.Application
 import android.content.Context
 import android.util.Log
@@ -32,7 +33,10 @@ data class Job(
     val title: String = "",
     val company: String = "",
     val salary: String = "",
-    val description: String = ""
+    val description: String = "",
+    val type: String = "Full-time",
+    val employerEmail: String = "",
+    val requirements: String = ""
 )
 
 data class JobApplication(
@@ -284,15 +288,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         saveAllDataToLocal()
     }
 
-    fun postJob(title: String, company: String, salary: String, description: String) {
+    fun postJob(title: String, company: String, salary: String, description: String, type: String, requirements: String) {
+        val userEmail = currentUser?.email ?: ""
         val newJob = Job(
             id = (_jobs.value.maxOfOrNull { it.id } ?: 0) + 1,
             title = title,
             company = company,
             salary = salary,
-            description = description
+            description = description,
+            requirements = requirements,
+            type = type,
+            employerEmail = userEmail
         )
         _jobs.value = _jobs.value + newJob
+        saveAllDataToLocal()
+    }
+
+    fun deleteJob(jobId: Int) {
+        _jobs.value = _jobs.value.filter { it.id != jobId }
         saveAllDataToLocal()
     }
 
@@ -323,6 +336,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             obj.put("company", j.company)
             obj.put("salary", j.salary)
             obj.put("description", j.description)
+            obj.put("requirements", j.requirements)
+            obj.put("type", j.type)
+            obj.put("employerEmail", j.employerEmail)
             jobsArr.put(obj)
         }
         editor.putString("all_jobs", jobsArr.toString())
@@ -396,7 +412,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val arr = JSONArray(jobsStr)
             for (i in 0 until arr.length()) {
                 val obj = arr.getJSONObject(i)
-                list.add(Job(obj.getInt("id"), obj.getString("title"), obj.getString("company"), obj.getString("salary"), obj.getString("description")))
+                list.add(Job(id = obj.getInt("id"),
+                    title = obj.getString("title"),
+                    company = obj.getString("company"),
+                    salary = obj.getString("salary"),
+                    description = obj.getString("description"),
+                    requirements = obj.optString("requirements", ""),
+                    type = obj.optString("type", "Full-time"),
+                    employerEmail = obj.optString("employerEmail", "")))
             }
             _jobs.value = list
         } else {

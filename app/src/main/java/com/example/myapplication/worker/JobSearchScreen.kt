@@ -194,7 +194,7 @@ fun JobCard(
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Surface(color = Color(0xFFE0E7FF), shape = RoundedCornerShape(8.dp)) {
-                    Text("Full-time", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = Color(0xFF4338CA), fontSize = 12.sp)
+                    Text(job.type, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = Color(0xFF4338CA), fontSize = 12.sp)
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))

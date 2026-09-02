@@ -69,7 +69,6 @@ fun AppNavigation() {
             EmployerScreen(viewModel = sharedViewModel, navController = navController)
         }
 
-<<<<<<< Updated upstream
         composable(
             route = "job_details/{jobId}/{applicationId}",
             arguments = listOf(
@@ -83,10 +82,11 @@ fun AppNavigation() {
                 applicationId = backStackEntry.arguments?.getInt("applicationId") ?: -1,
                 onBack = { navController.popBackStack() }
             )
-=======
+        }
+
+        // Your assigned Company Details screen is safely registered here
         composable(route = "company_details") {
             CompanyDetailsScreen(viewModel = sharedViewModel, navController = navController)
->>>>>>> Stashed changes
         }
 
         composable(route = "worker_profile") {

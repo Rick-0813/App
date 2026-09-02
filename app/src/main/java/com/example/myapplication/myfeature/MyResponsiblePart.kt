@@ -165,7 +165,7 @@ fun MyJobDetailsScreen(
         ) {
             item { JobHeader(job, currentApplication) }
             item { AboutJob(job) }
-            item { RequirementsCard() }
+            item { RequirementsCard(job) }
             item {
                 ReviewsAndRatings(
                     viewModel = viewModel,
@@ -206,7 +206,7 @@ private fun JobHeader(job: Job, application: JobApplication?) {
         }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             item { StatusPill(job.salary) }
-            item { StatusPill("Part-Time") }
+            item { StatusPill(job.type) }
             application?.let { item { StatusPill(it.status, green = it.status == "Completed") } }
         }
     }
@@ -233,7 +233,21 @@ private fun AboutJob(job: Job) {
 }
 
 @Composable
-private fun RequirementsCard() {
+private fun RequirementsCard(job: Job) {
+    // 1. Check if the job actually has requirements saved
+    val savedReqs = job.requirements.trim()
+
+    // 2. Split by new lines. If empty, use the fallback list.
+    val displayList = if (savedReqs.isNotEmpty()) {
+        savedReqs.split("\n").map { it.trim() }.filter { it.isNotEmpty() }
+    } else {
+        listOf(
+            "Be punctual and reliable.",
+            "Communicate clearly with the employer.",
+            "Follow workplace safety instructions."
+        )
+    }
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = SoftBlue,
@@ -242,17 +256,16 @@ private fun RequirementsCard() {
     ) {
         Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
             SectionTitle("Requirements")
-            listOf("Be punctual and reliable.", "Communicate clearly with the employer.", "Follow workplace safety instructions.").forEach {
+            displayList.forEach { requirementText ->
                 Row(verticalAlignment = Alignment.Top) {
                     Icon(Icons.Outlined.CheckCircle, null, tint = SuccessGreen, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.width(10.dp))
-                    Text(it, color = MutedText)
+                    Text(requirementText, color = MutedText)
                 }
             }
         }
     }
 }
-
 @Composable
 private fun ReviewsAndRatings(
     viewModel: MainViewModel,
