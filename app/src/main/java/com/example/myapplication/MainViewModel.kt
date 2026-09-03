@@ -1,6 +1,5 @@
 package com.example.myapplication
 
-import android.R.attr.type
 import android.app.Application
 import android.content.Context
 import android.util.Log
@@ -44,6 +43,7 @@ data class JobApplication(
     val jobId: Int = 0,
     val workerName: String = "",
     val workerEmail: String = "",
+    val message: String = "",
     var status: String = "Pending"
 )
 
@@ -97,7 +97,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         loadDataFromLocal()
     }
 
-    // 同时支持 Email, Name, Phone 检查
     suspend fun checkUserExists(account: String): UserAccount? {
         val cleanAccount = account.trim()
         Log.d(TAG, "Checking account: $cleanAccount")
@@ -145,7 +144,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             Log.d(TAG, "Google Login successful for ${existing.name}")
             Result.success(Unit)
         } else {
-            // 如果是第一次通过 Google 登录，自动创建一个账户
             val newUser = UserAccount(name, email, "", "G-AUTH-PASS", "Worker")
             _allUsers.value = _allUsers.value + newUser
             currentUser = newUser
@@ -155,7 +153,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun applyForJob(jobId: Int): Boolean {
+    fun applyForJob(jobId: Int, message: String = ""): Boolean {
         val user = currentUser ?: return false
         if (user.role != "Worker") return false
         if (_applications.value.any { it.jobId == jobId && it.workerEmail == user.email && it.status != "Rejected" }) {
@@ -166,9 +164,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             jobId = jobId,
             workerName = user.name,
             workerEmail = user.email,
+            message = message.trim(),
             status = "Pending"
         )
         _applications.value = _applications.value + newApp
+        saveAllDataToLocal()
+        return true
+    }
+
+    fun cancelApplication(applicationId: Int): Boolean {
+        val target = _applications.value.find { it.id == applicationId } ?: return false
+        if (target.status != "Pending") return false
+        _applications.value = _applications.value.filter { it.id != applicationId }
         saveAllDataToLocal()
         return true
     }
@@ -185,6 +192,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun hasSubmittedReview(applicationId: Int, direction: ReviewDirection): Boolean =
         _reviews.value.any { it.applicationId == applicationId && it.direction == direction }
+
+    // 级联注销账号（只保留这一个）
+    fun deleteCurrentUserAccount() {
+        val user = currentUser ?: return
+        val userEmail = user.email
+
+        _allUsers.value = _allUsers.value.filter { it.email != userEmail }
+        _applications.value = _applications.value.filter { it.workerEmail != userEmail }
+
+        val myJobIds = _jobs.value.filter { it.employerEmail.equals(userEmail, ignoreCase = true) }.map { it.id }.toSet()
+        if (myJobIds.isNotEmpty()) {
+            _jobs.value = _jobs.value.filter { it.id !in myJobIds }
+            _applications.value = _applications.value.filter { it.jobId !in myJobIds }
+        }
+
+        currentUser = null
+        _savedJobIds.value = emptySet()
+        saveAllDataToLocal()
+    }
 
     fun submitReview(
         jobId: Int,
@@ -213,8 +239,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             direction = direction,
             reviewerName = user.name,
             subjectName = if (direction == ReviewDirection.WORKER_TO_COMPANY) job.company else application.workerName,
-            // Company reviews belong to the company, not to a global review list
-            // and not only to one job post from that company.
             subjectKey = if (direction == ReviewDirection.WORKER_TO_COMPANY) {
                 normalizedCompanyKey(job.company)
             } else {
@@ -230,7 +254,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return true
     }
 
-    /** Returns only reviews written for this company. */
     fun companyReviews(companyName: String): List<JobReview> =
         _reviews.value.filter { review ->
             review.direction == ReviewDirection.WORKER_TO_COMPANY &&
@@ -238,7 +261,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             review.subjectName.trim().equals(companyName.trim(), ignoreCase = true))
         }
 
-    /** Company average = total stars for this company / its review count. */
     fun companyRating(companyName: String): Float =
         calculateAverageRating(companyReviews(companyName).map { it.rating })
 
@@ -323,8 +345,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         saveAllDataToLocal()
     }
 
+    fun updateJob(jobId: Int, newTitle: String, newSalary: String, newDescription: String, newType: String, newRequirements: String) {
+        _jobs.value = _jobs.value.map { job ->
+            if (job.id == jobId) {
+                job.copy(
+                    title = newTitle.trim(),
+                    salary = newSalary.trim(),
+                    description = newDescription.trim(),
+                    type = newType.trim(),
+                    requirements = newRequirements.trim()
+                )
+            } else job
+        }
+        saveAllDataToLocal()
+    }
+
     fun deleteJob(jobId: Int) {
         _jobs.value = _jobs.value.filter { it.id != jobId }
+        _applications.value = _applications.value.filter { it.jobId != jobId }
         saveAllDataToLocal()
     }
 
@@ -369,6 +407,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             obj.put("jobId", a.jobId)
             obj.put("workerName", a.workerName)
             obj.put("workerEmail", a.workerEmail)
+            obj.put("message", a.message)
             obj.put("status", a.status)
             appsArr.put(obj)
         }
@@ -431,23 +470,70 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val arr = JSONArray(jobsStr)
             for (i in 0 until arr.length()) {
                 val obj = arr.getJSONObject(i)
-                list.add(Job(id = obj.getInt("id"),
+                list.add(Job(
+                    id = obj.getInt("id"),
                     title = obj.getString("title"),
                     company = obj.getString("company"),
                     salary = obj.getString("salary"),
                     description = obj.getString("description"),
                     requirements = obj.optString("requirements", ""),
                     type = obj.optString("type", "Full-time"),
-                    employerEmail = obj.optString("employerEmail", "")))
+                    employerEmail = obj.optString("employerEmail", "")
+                ))
             }
             _jobs.value = list
         } else {
             _jobs.value = listOf(
-                Job(1, "Software Engineer", "Google", "$150,000", "Full-time Dev"),
-                Job(2, "Product Manager", "Meta", "$140,000", "Full-time PM"),
-                Job(3, "UI/UX Designer", "Apple", "$130,000", "Part-time Design"),
-                Job(4, "Delivery Helper", "GreenGro", "RM 15/Hr", "Flexible hours"),
-                Job(5, "Cashier", "Fresh Market", "RM 12/Hr", "Retail shift")
+                Job(
+                    id = 1,
+                    title = "Software Engineer",
+                    company = "Google",
+                    salary = "$150,000",
+                    description = "Build cutting-edge mobile apps using Jetpack Compose and Kotlin.",
+                    requirements = "Proficient in Kotlin and Jetpack Compose\nExperience with Git version control\nStrong problem-solving and algorithmic thinking",
+                    type = "Full-time",
+                    employerEmail = "derrick.t@gmail.com"
+                ),
+                Job(
+                    id = 2,
+                    title = "Product Manager",
+                    company = "Meta",
+                    salary = "$140,000",
+                    description = "Lead multidisciplinary product teams and drive product delivery.",
+                    requirements = "Experience with Agile and Scrum methodologies\nProven track record in roadmap definition\nExcellent interpersonal and presentation skills",
+                    type = "Full-time",
+                    employerEmail = "derrick.t@gmail.com"
+                ),
+                Job(
+                    id = 3,
+                    title = "UI/UX Designer",
+                    company = "Apple",
+                    salary = "$130,000",
+                    description = "Design intuitive user interfaces and polished design systems.",
+                    requirements = "Proficiency with Figma and modern wireframing tools\nPortfolio showcasing clean mobile application UX\nStrong eye for typography, layouts, and accessibility",
+                    type = "Part-time",
+                    employerEmail = "derrick.t@gmail.com"
+                ),
+                Job(
+                    id = 4,
+                    title = "Delivery Helper",
+                    company = "GreenGro",
+                    salary = "RM 2,500.00",
+                    description = "Assist drivers with daily grocery load distribution and drop-offs.",
+                    requirements = "Punctual, physically fit, and dependable\nPossess a valid B2 motorcycle license\nFriendly customer service attitude",
+                    type = "Part-time",
+                    employerEmail = "jobboom.pro@gmail.com"
+                ),
+                Job(
+                    id = 5,
+                    title = "Cashier",
+                    company = "Fresh Market",
+                    salary = "RM 1,800.00",
+                    description = "Handle point-of-sale checkout and manage cashier drawer reconciliations.",
+                    requirements = "Basic numerical literacy and mental math\nHonest, disciplined, and customer-oriented\nComfortable working rotating weekend shifts",
+                    type = "Part-time",
+                    employerEmail = "jobboom.pro@gmail.com"
+                )
             )
         }
 
@@ -457,15 +543,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val arr = JSONArray(appsStr)
             for (i in 0 until arr.length()) {
                 val obj = arr.getJSONObject(i)
-                list.add(JobApplication(obj.getInt("id"), obj.getInt("jobId"), obj.getString("workerName"), obj.getString("workerEmail"), obj.getString("status")))
+                list.add(
+                    JobApplication(
+                        id = obj.getInt("id"),
+                        jobId = obj.getInt("jobId"),
+                        workerName = obj.getString("workerName"),
+                        workerEmail = obj.getString("workerEmail"),
+                        message = obj.optString("message", ""),
+                        status = obj.getString("status")
+                    )
+                )
             }
             _applications.value = list.ifEmpty {
-                listOf(JobApplication(100, 4, "Derrick Tan", "derrick@test.com", "Completed"))
+                listOf(JobApplication(100, 4, "Derrick Tan", "derrick@test.com", "I have relevant experience and am available immediately.", "Completed"))
             }
         } else {
-            // Completed demo record: both default accounts can immediately test two-way reviews.
             _applications.value = listOf(
-                JobApplication(100, 4, "Derrick Tan", "derrick@test.com", "Completed")
+                JobApplication(100, 4, "Derrick Tan", "derrick@test.com", "I have relevant experience and am available immediately.", "Completed")
             )
         }
 

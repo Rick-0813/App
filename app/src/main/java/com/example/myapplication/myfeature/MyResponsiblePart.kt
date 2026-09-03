@@ -1,8 +1,9 @@
 package com.example.myapplication.myfeature
 
 // MY RESPONSIBLE FEATURE FILE
-// Job Details + Apply Request + Favourite + Two-Way Review/Rating + Skill Badge
+// Job Details + Apply Request (with Formal Profile Confirmation, Re-apply, and Withdraw)
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -43,7 +44,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -62,9 +62,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -93,6 +93,7 @@ fun MyJobDetailsScreen(
     applicationId: Int,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
     val jobs by viewModel.jobs.collectAsState()
     val applications by viewModel.applications.collectAsState()
     val reviews by viewModel.reviews.collectAsState()
@@ -124,7 +125,10 @@ fun MyJobDetailsScreen(
     val alreadyReviewed = completedApplication?.let {
         viewModel.hasSubmittedReview(it.id, reviewDirection)
     } ?: false
+
     var showReviewDialog by remember { mutableStateOf(false) }
+    var showApplyDialog by remember { mutableStateOf(false) }
+    var showCancelDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = AppBackground,
@@ -152,7 +156,8 @@ fun MyJobDetailsScreen(
             JobActionBar(
                 isEmployer = isEmployer,
                 application = currentApplication,
-                onApply = { viewModel.applyForJob(job.id) }
+                onApply = { showApplyDialog = true },
+                onWithdraw = { showCancelDialog = true }
             )
         }
     ) { padding ->
@@ -185,6 +190,101 @@ fun MyJobDetailsScreen(
                 )
             }
         }
+    }
+
+    if (showApplyDialog) {
+        var messageText by remember { mutableStateOf("") }
+        val isReapply = currentApplication?.status == "Rejected"
+        AlertDialog(
+            onDismissRequest = { showApplyDialog = false },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(22.dp),
+            title = {
+                Text(
+                    text = if (isReapply) "Re-apply for ${job.title} 🔄" else "Apply for ${job.title} 🚀",
+                    color = Navy,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Surface(
+                        color = SoftBlue,
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, Color(0xFFD5E2F7)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("Applicant Profile Summary", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BrandBlue)
+                            Text("Name: ${user?.name ?: "N/A"}", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Navy)
+                            Text("Email: ${user?.email ?: "N/A"}", fontSize = 13.sp, color = MutedText)
+                            Text("Phone: ${if (user?.phone.isNullOrBlank()) "Not provided" else user?.phone}", fontSize = 13.sp, color = MutedText)
+                        }
+                    }
+
+                    Text(
+                        text = if (isReapply) "Add a note addressing previous feedback:" else "Cover Note for Employer (Optional):",
+                        color = MutedText,
+                        fontSize = 13.sp
+                    )
+                    OutlinedTextField(
+                        value = messageText,
+                        onValueChange = { messageText = it },
+                        placeholder = { Text("e.g. I am passionate about this role and available immediately.") },
+                        minLines = 3,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val ok = viewModel.applyForJob(job.id, messageText)
+                        if (ok) {
+                            Toast.makeText(context, if (isReapply) "Re-application submitted! 🔄" else "Application submitted! 🎉", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "Application failed or already active.", Toast.LENGTH_SHORT).show()
+                        }
+                        showApplyDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen)
+                ) {
+                    Text(if (isReapply) "Confirm & Re-apply" else "Confirm & Submit")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showApplyDialog = false }) {
+                    Text("Cancel", color = Color.Gray)
+                }
+            }
+        )
+    }
+
+    if (showCancelDialog && currentApplication != null) {
+        AlertDialog(
+            onDismissRequest = { showCancelDialog = false },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = Color.White,
+            title = { Text("Withdraw Application? ⚠️", fontWeight = FontWeight.Bold, color = Navy) },
+            text = { Text("Are you sure you want to cancel your job application? The employer will not see your request anymore.", color = MutedText) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.cancelApplication(currentApplication.id)
+                        Toast.makeText(context, "Application withdrawn.", Toast.LENGTH_SHORT).show()
+                        showCancelDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444))
+                ) { Text("Confirm Withdraw", color = Color.White) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCancelDialog = false }) { Text("Keep Application", color = Color.Gray) }
+            }
+        )
     }
 
     if (showReviewDialog && completedApplication != null) {
@@ -254,10 +354,7 @@ private fun AboutJob(job: Job) {
 
 @Composable
 private fun RequirementsCard(job: Job) {
-    // 1. Check if the job actually has requirements saved
     val savedReqs = job.requirements.trim()
-
-    // 2. Split by new lines. If empty, use the fallback list.
     val displayList = if (savedReqs.isNotEmpty()) {
         savedReqs.split("\n").map { it.trim() }.filter { it.isNotEmpty() }
     } else {
@@ -286,6 +383,7 @@ private fun RequirementsCard(job: Job) {
         }
     }
 }
+
 @Composable
 private fun ReviewsAndRatings(
     viewModel: MainViewModel,
@@ -296,7 +394,6 @@ private fun ReviewsAndRatings(
     reviews: List<JobReview>,
     onReview: () -> Unit
 ) {
-    // Only show reviews belonging to the company on this Job Details page.
     val companyReviews = viewModel.companyReviews(job.company)
     val workerEmail = application?.workerEmail.orEmpty()
     val workerReviews = reviews.filter {
@@ -456,36 +553,59 @@ private fun ReviewCard(review: JobReview) {
 private fun JobActionBar(
     isEmployer: Boolean,
     application: JobApplication?,
-    onApply: () -> Unit
+    onApply: () -> Unit,
+    onWithdraw: () -> Unit
 ) {
     Surface(color = AppBackground, shadowElevation = 10.dp) {
-        val enabled = !isEmployer && application == null
+        val isRejected = application?.status == "Rejected"
+        val isPending = application?.status == "Pending"
+        val canApply = !isEmployer && (application == null || isRejected)
+
         val label = when {
             isEmployer -> "Employer Account • View Applications"
             application == null -> "Apply Now"
+            isRejected -> "Application Rejected • Apply Again 🔄"
             application.status == "Completed" -> "Job Completed • Reviews Available"
             else -> "Application ${application.status}"
         }
-        Button(
-            onClick = onApply,
-            enabled = enabled,
+
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .height(54.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = SuccessGreen,
-                disabledContainerColor = if (application?.status == "Completed") SuccessGreen else SoftBlue,
-                disabledContentColor = if (application?.status == "Completed") Color.White else DeepBlue
-            )
+                .padding(horizontal = 16.dp, vertical = 10.dp)
         ) {
-            Text(label, fontWeight = FontWeight.Bold)
+            Button(
+                onClick = onApply,
+                enabled = canApply,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isRejected) Color(0xFFD97706) else SuccessGreen,
+                    disabledContainerColor = if (application?.status == "Completed") SuccessGreen else SoftBlue,
+                    disabledContentColor = if (application?.status == "Completed") Color.White else DeepBlue
+                )
+            ) {
+                Text(label, fontWeight = FontWeight.Bold)
+            }
+
+            if (!isEmployer && isPending) {
+                Spacer(modifier = Modifier.height(6.dp))
+                OutlinedButton(
+                    onClick = onWithdraw,
+                    modifier = Modifier.fillMaxWidth().height(44.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, Color(0xFFEF4444)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFEF4444))
+                ) {
+                    Text("Withdraw Application", fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 }
 
-/** Opens the student's Employer → Worker review form directly from Boss Panel. */
 @Composable
 fun EmployerReviewWorkerDialog(
     viewModel: MainViewModel,

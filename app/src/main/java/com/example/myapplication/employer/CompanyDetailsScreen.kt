@@ -9,8 +9,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -21,11 +22,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.myapplication.MainViewModel
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CompanyDetailsScreen(viewModel: MainViewModel, navController: NavController) {
     val user = viewModel.currentUser
+    val jobs by viewModel.jobs.collectAsState()
+
+    val companyName = remember(jobs, user) {
+        jobs.find { it.employerEmail.equals(user?.email, ignoreCase = true) }?.company
+            ?: "${user?.name ?: "Your Name"}'s Company"
+    }
+
+    val companyRating = viewModel.companyRating(companyName)
+    val companyReviewCount = viewModel.companyReviewCount(companyName)
 
     val primaryPurple = Color(0xFF7E57C2)
     val darkPurple = Color(0xFF512DA8)
@@ -75,7 +86,7 @@ fun CompanyDetailsScreen(viewModel: MainViewModel, navController: NavController)
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "${user?.name ?: "Your Name"}'s Company",
+                    text = companyName,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -86,7 +97,47 @@ fun CompanyDetailsScreen(viewModel: MainViewModel, navController: NavController)
                     color = Color.White.copy(alpha = 0.8f)
                 )
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Surface(
+                    color = softSurface,
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceAround
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (companyReviewCount == 0) "No Rating" else String.format(Locale.US, "%.1f", companyRating),
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = textDark
+                                )
+                            }
+                            Text("Overall Rating", fontSize = 11.sp, color = Color.Gray)
+                        }
+
+                        VerticalDivider(modifier = Modifier.height(30.dp), color = Color(0xFFDED9FF))
+
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "$companyReviewCount",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Black,
+                                color = textDark
+                            )
+                            Text("Reviews Received", fontSize = 11.sp, color = Color.Gray)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),

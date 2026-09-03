@@ -3,6 +3,7 @@ package com.example.myapplication.employer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -26,6 +28,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.text.input.KeyboardType
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +46,16 @@ fun EmployerScreen(viewModel: MainViewModel, navController: NavController) {
         colors = listOf(primaryPurple, darkPurple)
     )
 
+    val currentBossEmail = viewModel.currentUser?.email ?: ""
+    val myPostedJobIds = remember(jobs, currentBossEmail) {
+        jobs.filter { it.employerEmail.equals(currentBossEmail, ignoreCase = true) }
+            .map { it.id }
+            .toSet()
+    }
+    val myApplications = remember(applications, myPostedJobIds) {
+        applications.filter { it.jobId in myPostedJobIds }
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(backgroundBrush)) {
         Scaffold(
             modifier = Modifier.statusBarsPadding(),
@@ -57,7 +70,6 @@ fun EmployerScreen(viewModel: MainViewModel, navController: NavController) {
                         title = { Text("Boss Panel 👑", fontWeight = FontWeight.Black, color = primaryPurple) },
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                         actions = {
-                            // Your assigned button to view company details
                             IconButton(onClick = { navController.navigate("company_details") }) {
                                 Icon(Icons.Default.Business, contentDescription = "Company Details", tint = primaryPurple)
                             }
@@ -100,12 +112,12 @@ fun EmployerScreen(viewModel: MainViewModel, navController: NavController) {
         ) { padding ->
             Box(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp)) {
                 when (currentBottomTab) {
-                    0 -> ManageAppsTab(applications, jobs, viewModel) { jobId, applicationId ->
+                    0 -> ManageAppsTab(myApplications, jobs, viewModel) { jobId, applicationId ->
                         navController.navigate("job_details/$jobId/$applicationId")
                     }
-                    1 -> PostJobTab(viewModel) // Your assigned tab feature
+                    1 -> PostJobTab(viewModel)
                     2 -> ManageAppsTab(
-                        apps = applications,
+                        apps = myApplications,
                         jobs = jobs,
                         viewModel = viewModel,
                         title = "Review Workers ⭐",
@@ -150,6 +162,9 @@ fun ManageAppsTab(
             LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 items(visibleApps) { app ->
                     val jobTitle = jobs.find { it.id == app.jobId }?.title ?: "Job"
+                    val workerRating = viewModel.workerRating(app.workerEmail)
+                    val badges = viewModel.skillBadgesForWorker(app.workerEmail)
+
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(24.dp),
@@ -157,8 +172,66 @@ fun ManageAppsTab(
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
-                            Text(text = app.workerName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E1B4B))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(text = app.workerName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E1B4B))
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = if (workerRating == 0f) "New Worker" else String.format(Locale.US, "%.1f", workerRating),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF1E1B4B)
+                                    )
+                                }
+                            }
+
                             Text(text = "Wants to be a $jobTitle", fontSize = 14.sp, color = Color(0xFF7E57C2))
+
+                            if (badges.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    items(badges) { badge ->
+                                        Surface(
+                                            color = Color(0xFFDCFCE7),
+                                            shape = RoundedCornerShape(50)
+                                        ) {
+                                            Text(
+                                                text = "$badge ✓",
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFF16A34A)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (app.message.isNotBlank()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Surface(
+                                    color = Color.White,
+                                    shape = RoundedCornerShape(10.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFDED9FF))
+                                ) {
+                                    Column(modifier = Modifier.padding(10.dp)) {
+                                        Text("Worker Message:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF7E57C2))
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = "“${app.message}”",
+                                            fontSize = 13.sp,
+                                            fontStyle = FontStyle.Italic,
+                                            color = Color(0xFF374151)
+                                        )
+                                    }
+                                }
+                            }
 
                             Spacer(modifier = Modifier.height(16.dp))
 
@@ -262,6 +335,9 @@ fun PostJobTab(viewModel: MainViewModel) {
     var jobType by remember { mutableStateOf("Full-time") }
     var showSuccess by remember { mutableStateOf(false) }
 
+    var jobToDelete by remember { mutableStateOf<com.example.myapplication.Job?>(null) }
+    var jobToEdit by remember { mutableStateOf<com.example.myapplication.Job?>(null) }
+
     val primaryPurple = Color(0xFF7E57C2)
     val myPostedJobs = jobs.filter { it.employerEmail == currentUser?.email }
 
@@ -295,7 +371,6 @@ fun PostJobTab(viewModel: MainViewModel) {
                     }
                 }
 
-                // Job Type Toggle
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     FilterChip(
                         selected = jobType == "Full-time",
@@ -333,7 +408,6 @@ fun PostJobTab(viewModel: MainViewModel) {
                 OutlinedTextField(
                     value = rawSalary,
                     onValueChange = { input ->
-                        // Only allow numbers
                         if (input.all { it.isDigit() }) {
                             rawSalary = input
                             showSuccess = false
@@ -390,7 +464,6 @@ fun PostJobTab(viewModel: MainViewModel) {
             }
         }
 
-        // Manage/Delete Created Jobs
         if (myPostedJobs.isNotEmpty()) {
             Spacer(modifier = Modifier.height(32.dp))
             Text("Manage Active Listings", fontSize = 18.sp, fontWeight = FontWeight.Black, color = Color.White)
@@ -411,13 +484,115 @@ fun PostJobTab(viewModel: MainViewModel) {
                             Text(job.title, fontWeight = FontWeight.Bold, color = Color(0xFF1E1B4B))
                             Text("${job.type} • ${job.salary}", fontSize = 12.sp, color = Color.Gray)
                         }
-                        IconButton(onClick = { viewModel.deleteJob(job.id) }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete Job", tint = Color.Red)
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            // 编辑按钮
+                            IconButton(onClick = { jobToEdit = job }) {
+                                Icon(Icons.Default.Edit, contentDescription = "Edit Job", tint = primaryPurple)
+                            }
+                            // 删除按钮（触发二次确认弹窗）
+                            IconButton(onClick = { jobToDelete = job }) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete Job", tint = Color.Red)
+                            }
                         }
                     }
                 }
             }
         }
         Spacer(modifier = Modifier.height(32.dp))
+    }
+
+    jobToDelete?.let { targetJob ->
+        AlertDialog(
+            onDismissRequest = { jobToDelete = null },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = Color.White,
+            title = { Text("Delete Listing? 🗑️", fontWeight = FontWeight.Bold, color = Color(0xFF1E1B4B)) },
+            text = { Text("Are you sure you want to remove \"${targetJob.title}\"? This action cannot be undone.", color = Color(0xFF4B5563)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteJob(targetJob.id)
+                        jobToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444))
+                ) { Text("Delete", color = Color.White) }
+            },
+            dismissButton = {
+                TextButton(onClick = { jobToDelete = null }) { Text("Cancel", color = Color.Gray) }
+            }
+        )
+    }
+
+    jobToEdit?.let { targetJob ->
+        var editTitle by remember(targetJob) { mutableStateOf(targetJob.title) }
+        var editSalary by remember(targetJob) { mutableStateOf(targetJob.salary) }
+        var editDesc by remember(targetJob) { mutableStateOf(targetJob.description) }
+        var editType by remember(targetJob) { mutableStateOf(targetJob.type) }
+        var editReqs by remember(targetJob) { mutableStateOf(targetJob.requirements) }
+
+        AlertDialog(
+            onDismissRequest = { jobToEdit = null },
+            shape = RoundedCornerShape(24.dp),
+            containerColor = Color.White,
+            title = { Text("Edit Job Listing ✏️", fontWeight = FontWeight.Bold, color = Color(0xFF1E1B4B)) },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = editType == "Full-time",
+                            onClick = { editType = "Full-time" },
+                            label = { Text("Full-time") }
+                        )
+                        FilterChip(
+                            selected = editType == "Part-time",
+                            onClick = { editType = "Part-time" },
+                            label = { Text("Part-time") }
+                        )
+                    }
+                    OutlinedTextField(
+                        value = editTitle,
+                        onValueChange = { editTitle = it },
+                        label = { Text("Job Title") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editSalary,
+                        onValueChange = { editSalary = it },
+                        label = { Text("Salary") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editDesc,
+                        onValueChange = { editDesc = it },
+                        label = { Text("Job Description") },
+                        minLines = 2,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editReqs,
+                        onValueChange = { editReqs = it },
+                        label = { Text("Requirements (each on new line)") },
+                        minLines = 2,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.updateJob(targetJob.id, editTitle, editSalary, editDesc, editType, editReqs)
+                        jobToEdit = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = primaryPurple)
+                ) { Text("Save Changes") }
+            },
+            dismissButton = {
+                TextButton(onClick = { jobToEdit = null }) { Text("Cancel", color = Color.Gray) }
+            }
+        )
     }
 }
