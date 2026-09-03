@@ -163,7 +163,14 @@ fun MyJobDetailsScreen(
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 18.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            item { JobHeader(job, currentApplication) }
+            item {
+                JobHeader(
+                    job = job,
+                    application = currentApplication,
+                    companyRating = viewModel.companyRating(job.company),
+                    companyReviewCount = viewModel.companyReviewCount(job.company)
+                )
+            }
             item { AboutJob(job) }
             item { RequirementsCard(job) }
             item {
@@ -195,14 +202,27 @@ fun MyJobDetailsScreen(
 }
 
 @Composable
-private fun JobHeader(job: Job, application: JobApplication?) {
+private fun JobHeader(
+    job: Job,
+    application: JobApplication?,
+    companyRating: Float,
+    companyReviewCount: Int
+) {
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text(job.title, color = Navy, fontSize = 30.sp, lineHeight = 35.sp, fontWeight = FontWeight.Bold)
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(job.company, color = MutedText, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.width(10.dp))
             Icon(Icons.Filled.Star, null, tint = BrightGreen, modifier = Modifier.size(21.dp))
-            Text(" 4.8", color = Navy, fontWeight = FontWeight.Bold)
+            Text(
+                if (companyReviewCount == 0) {
+                    " No rating"
+                } else {
+                    " %.1f (%d)".format(companyRating, companyReviewCount)
+                },
+                color = Navy,
+                fontWeight = FontWeight.Bold
+            )
         }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             item { StatusPill(job.salary) }
@@ -276,7 +296,8 @@ private fun ReviewsAndRatings(
     reviews: List<JobReview>,
     onReview: () -> Unit
 ) {
-    val companyReviews = reviews.filter { it.jobId == job.id && it.direction == ReviewDirection.WORKER_TO_COMPANY }
+    // Only show reviews belonging to the company on this Job Details page.
+    val companyReviews = viewModel.companyReviews(job.company)
     val workerEmail = application?.workerEmail.orEmpty()
     val workerReviews = reviews.filter {
         it.subjectKey == workerEmail && it.direction == ReviewDirection.EMPLOYER_TO_WORKER
@@ -289,7 +310,7 @@ private fun ReviewsAndRatings(
             RatingSummary(
                 modifier = Modifier.weight(1f),
                 title = "Company",
-                rating = viewModel.companyRating(job.id),
+                rating = viewModel.companyRating(job.company),
                 count = companyReviews.size,
                 company = true
             )

@@ -101,7 +101,7 @@ fun JobSearchScreen(viewModel: MainViewModel, navController: NavController) {
                     listOf(
                         Triple(0, "Jobs", Icons.Default.Work),
                         Triple(1, "Saved", Icons.Default.Bookmark),
-                        Triple(2, "Apps", Icons.AutoMirrored.Filled.Assignment)
+                        Triple(2, "My Job", Icons.AutoMirrored.Filled.Assignment)
                     ).forEach { (idx, label, icon) ->
                         NavigationBarItem(
                             selected = currentBottomTab == idx,
@@ -143,7 +143,7 @@ fun JobTab(
     onOpenJob: (Int) -> Unit
 ) {
     val filtered = jobs.filter { it.title.contains(query, true) || it.company.contains(query, true) }
-    
+
     if (filtered.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("No jobs found 🧸", color = Color.White, fontWeight = FontWeight.Bold)
@@ -242,7 +242,7 @@ fun AppsTab(
 ) {
     val myApps = apps.filter { it.workerEmail == viewModel.currentUser?.email }
     Column(modifier = Modifier.padding(top = 16.dp)) {
-        Text("My Journey 🌈", fontSize = 22.sp, fontWeight = FontWeight.Black, color = Color.White)
+        Text("My Job 🌈", fontSize = 22.sp, fontWeight = FontWeight.Black, color = Color.White)
         Spacer(modifier = Modifier.height(16.dp))
         if (myApps.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

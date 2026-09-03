@@ -66,6 +66,12 @@ data class JobReview(
     val skillBadge: String = ""
 )
 
+internal fun calculateAverageRating(ratings: List<Int>): Float =
+    if (ratings.isEmpty()) 0f else ratings.sum().toFloat() / ratings.size
+
+internal fun normalizedCompanyKey(companyName: String): String =
+    "company:${companyName.trim().lowercase(Locale.ROOT)}"
+
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val prefs = getApplication<Application>().getSharedPreferences("jobboom_local_data", Context.MODE_PRIVATE)
@@ -95,10 +101,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     suspend fun checkUserExists(account: String): UserAccount? {
         val cleanAccount = account.trim()
         Log.d(TAG, "Checking account: $cleanAccount")
-        val user = _allUsers.value.find { 
-            it.email.equals(cleanAccount, ignoreCase = true) || 
-            it.name.equals(cleanAccount, ignoreCase = true) ||
-            it.phone == cleanAccount
+        val user = _allUsers.value.find {
+            it.email.equals(cleanAccount, ignoreCase = true) ||
+                    it.name.equals(cleanAccount, ignoreCase = true) ||
+                    it.phone == cleanAccount
         }
         return user
     }
@@ -115,9 +121,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     suspend fun loginUser(accountInput: String, passwordInput: String): Result<Unit> {
         val cleanAccount = accountInput.trim()
-        val user = _allUsers.value.find { 
-            (it.email.equals(cleanAccount, ignoreCase = true) || it.phone == cleanAccount || it.name.equals(cleanAccount, ignoreCase = true)) 
-            && it.password == passwordInput.trim() 
+        val user = _allUsers.value.find {
+            (it.email.equals(cleanAccount, ignoreCase = true) || it.phone == cleanAccount || it.name.equals(cleanAccount, ignoreCase = true))
+                    && it.password == passwordInput.trim()
         }
         return if (user != null) {
             currentUser = user
@@ -207,7 +213,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             direction = direction,
             reviewerName = user.name,
             subjectName = if (direction == ReviewDirection.WORKER_TO_COMPANY) job.company else application.workerName,
-            subjectKey = if (direction == ReviewDirection.WORKER_TO_COMPANY) "job:$jobId" else application.workerEmail,
+            // Company reviews belong to the company, not to a global review list
+            // and not only to one job post from that company.
+            subjectKey = if (direction == ReviewDirection.WORKER_TO_COMPANY) {
+                normalizedCompanyKey(job.company)
+            } else {
+                application.workerEmail
+            },
             rating = rating.coerceIn(1, 5),
             comment = comment.trim(),
             date = SimpleDateFormat("MMM dd, yyyy", Locale.US).format(Date()),
@@ -218,12 +230,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return true
     }
 
-    fun companyRating(jobId: Int): Float {
-        val values = _reviews.value.filter {
-            it.jobId == jobId && it.direction == ReviewDirection.WORKER_TO_COMPANY
+    /** Returns only reviews written for this company. */
+    fun companyReviews(companyName: String): List<JobReview> =
+        _reviews.value.filter { review ->
+            review.direction == ReviewDirection.WORKER_TO_COMPANY &&
+                    (review.subjectKey == normalizedCompanyKey(companyName) ||
+                            review.subjectName.trim().equals(companyName.trim(), ignoreCase = true))
         }
-        return if (values.isEmpty()) 0f else values.map { it.rating }.average().toFloat()
-    }
+
+    /** Company average = total stars for this company / its review count. */
+    fun companyRating(companyName: String): Float =
+        calculateAverageRating(companyReviews(companyName).map { it.rating })
+
+    fun companyReviewCount(companyName: String): Int = companyReviews(companyName).size
 
     fun workerRating(workerEmail: String): Float {
         val values = _reviews.value.filter {
@@ -244,7 +263,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val currentSet = _savedJobIds.value
         val newSet = if (currentSet.contains(jobId)) currentSet - jobId else currentSet + jobId
         _savedJobIds.value = newSet
-        
+
         _allUsers.value = _allUsers.value.map {
             if (it.email == user.email) it.copy(savedJobs = newSet.toList()) else it
         }
@@ -387,10 +406,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val savedArr = obj.getJSONArray("savedJobs")
                 val savedList = mutableListOf<Int>()
                 for (j in 0 until savedArr.length()) savedList.add(savedArr.getInt(j))
-                
+
                 list.add(UserAccount(
-                    obj.getString("name"), obj.getString("email"), 
-                    obj.getString("phone"), obj.getString("password"), 
+                    obj.getString("name"), obj.getString("email"),
+                    obj.getString("phone"), obj.getString("password"),
                     obj.getString("role"), savedList
                 ))
             }
