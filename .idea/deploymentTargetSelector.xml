@@ -4,6 +4,7 @@
     <selectionStates>
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
+<<<<<<< Updated upstream
         <DropdownSelection timestamp="2026-08-09T09:00:54.288794600Z">
           <Target type="DEFAULT_BOOT">
             <handle>
@@ -20,6 +21,16 @@
             </Target>
           </targets>
         </DialogSelection>
+=======
+        <DropdownSelection timestamp="2026-09-03T02:12:44.668977700Z">
+          <Target type="DEFAULT_BOOT">
+            <template>
+              <DeviceId pluginId="FirebaseDirectAccess" type="TEMPLATE" identifier="model_id=frankel/36" />
+            </template>
+          </Target>
+        </DropdownSelection>
+        <DialogSelection />
+>>>>>>> Stashed changes
       </SelectionState>
     </selectionStates>
   </component>

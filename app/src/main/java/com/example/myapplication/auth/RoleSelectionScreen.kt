@@ -27,7 +27,8 @@ import com.example.myapplication.MainViewModel
 fun RoleSelectionScreen(
     viewModel: MainViewModel,
     onSelectWorker: () -> Unit,
-    onSelectEmployer: () -> Unit
+    onSelectEmployer: () -> Unit,
+    onGoToSupabase: () -> Unit
 ) {
     val userName = viewModel.currentUser?.name ?: "Friend"
 
@@ -43,9 +44,8 @@ fun RoleSelectionScreen(
             .fillMaxSize()
             .background(backgroundBrush)
     ) {
-        // 背景装饰
         Box(modifier = Modifier.offset(200.dp, 100.dp).size(150.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.05f)))
-        
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -95,9 +95,20 @@ fun RoleSelectionScreen(
                     onSelectEmployer()
                 }
             )
-            
+
+            Spacer(modifier = Modifier.height(30.dp))
+
+            Button(
+                onClick = onGoToSupabase,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF59E0B)),
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape = RoundedCornerShape(28.dp)
+            ) {
+                Text("Go to Practical 9 (Supabase)", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
+
             Spacer(modifier = Modifier.weight(1f))
-            
+
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(8.dp))
