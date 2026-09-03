@@ -27,8 +27,7 @@ import com.example.myapplication.MainViewModel
 fun RoleSelectionScreen(
     viewModel: MainViewModel,
     onSelectWorker: () -> Unit,
-    onSelectEmployer: () -> Unit,
-    onGoToSupabase: () -> Unit
+    onSelectEmployer: () -> Unit
 ) {
     val userName = viewModel.currentUser?.name ?: "Friend"
 
@@ -96,16 +95,7 @@ fun RoleSelectionScreen(
                 }
             )
 
-            Spacer(modifier = Modifier.height(30.dp))
-
-            Button(
-                onClick = onGoToSupabase,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF59E0B)),
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                shape = RoundedCornerShape(28.dp)
-            ) {
-                Text("Go to Practical 9 (Supabase)", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            }
+            // 👈 橙色 Supabase 按钮已在这里被成功移除，界面更加清爽！
 
             Spacer(modifier = Modifier.weight(1f))
 

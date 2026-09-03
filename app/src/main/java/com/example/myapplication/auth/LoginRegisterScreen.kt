@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -46,7 +47,7 @@ fun LoginRegisterScreen(
 
     var errorMessage by remember { mutableStateOf("") }
     var isNewUser by remember { mutableStateOf(false) }
-    
+
     var showGoogleDialog by remember { mutableStateOf(false) }
     var showAddGmailDialog by remember { mutableStateOf(false) }
     var showTermsDialog by remember { mutableStateOf(false) }
@@ -83,7 +84,6 @@ fun LoginRegisterScreen(
         ) {
             Spacer(modifier = Modifier.height(40.dp))
 
-            // 同步桌面图标风格的 Logo
             Surface(
                 modifier = Modifier.size(80.dp),
                 shape = RoundedCornerShape(24.dp),
@@ -92,14 +92,14 @@ fun LoginRegisterScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(brandGradient), // 使用紫色渐变背景
+                        .background(brandGradient),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = "JB",
                         fontSize = 34.sp,
                         fontWeight = FontWeight.Black,
-                        color = Color.White // 白色文字
+                        color = Color.White
                     )
                 }
             }
@@ -207,7 +207,7 @@ fun LoginRegisterScreen(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        TextButton(onClick = { 
+                        TextButton(onClick = {
                             isPhoneMode = !isPhoneMode
                             accountInput = ""
                         }) {
@@ -260,7 +260,7 @@ fun LoginRegisterScreen(
                                     } else {
                                         viewModel.loginUser(accountInput, passwordInput)
                                     }
-                                    if (result.isSuccess) onLoginSuccess() 
+                                    if (result.isSuccess) onLoginSuccess()
                                     else errorMessage = result.exceptionOrNull()?.message ?: "Error"
                                 }
                             },
@@ -346,7 +346,7 @@ fun LoginRegisterScreen(
         if (showTermsDialog) {
             CuteInfoDialog(
                 title = "Terms of Service 📜",
-                content = "Welcome to JobBoom! By using our platform, you agree to treat everyone with respect, provide honest information, and use our magic for good. Let's build amazing careers together!",
+                content = "Welcome to JobBoom! By using our platform, you agree to treat everyone with respect, provide honest information, and use our magic for good.",
                 onDismiss = { showTermsDialog = false }
             )
         }
@@ -354,7 +354,7 @@ fun LoginRegisterScreen(
         if (showPrivacyDialog) {
             CuteInfoDialog(
                 title = "Privacy Policy 🔐",
-                content = "We value your trust. Your data is strictly protected and only used to match you with your dream jobs. We never share your magic secrets with third parties.",
+                content = "We value your trust. Your data is strictly protected and only used to match you with your dream jobs.",
                 onDismiss = { showPrivacyDialog = false }
             )
         }
@@ -400,9 +400,9 @@ fun GoogleAccountDialog(
                 AccountRow("Derrick Tan", "derrick.t@gmail.com", Color(0xFF7E57C2)) {
                     onAccountSelected("derrick.t@gmail.com", "Derrick Tan")
                 }
-                
+
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFF3E8FF))
-                
+
                 AccountRow("Work Account", "jobboom.pro@gmail.com", Color(0xFF16A34A)) {
                     onAccountSelected("jobboom.pro@gmail.com", "Work Account")
                 }
@@ -431,7 +431,7 @@ fun GoogleAccountDialog(
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
-                
+
                 TextButton(onClick = onDismiss) {
                     Text("Cancel", color = Color.Gray)
                 }
@@ -448,6 +448,7 @@ fun AddGmailDialog(
     var email by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
     var error by remember { mutableStateOf("") }
+    val textDark = Color(0xFF1E1B4B)
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -459,10 +460,10 @@ fun AddGmailDialog(
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = "Sign in with Google", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E1B4B))
+                Text(text = "Sign in with Google", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = textDark)
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(text = "Enter your Gmail to continue", fontSize = 14.sp, color = Color.Gray)
-                
+
                 Spacer(modifier = Modifier.height(24.dp))
 
                 CuteTextField(
@@ -471,7 +472,7 @@ fun AddGmailDialog(
                     label = "Your Name",
                     icon = Icons.Default.Person
                 )
-                
+
                 Spacer(modifier = Modifier.height(12.dp))
 
                 CuteTextField(
@@ -501,7 +502,7 @@ fun AddGmailDialog(
                 ) {
                     Text("Continue", fontWeight = FontWeight.Bold)
                 }
-                
+
                 TextButton(onClick = onDismiss) {
                     Text("Back", color = Color.Gray)
                 }
@@ -546,6 +547,7 @@ fun CuteTextField(
     isPassword: Boolean = false,
     isPhone: Boolean = false
 ) {
+    val textDark = Color(0xFF1E1B4B)
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -558,7 +560,10 @@ fun CuteTextField(
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
             keyboardType = if (isPhone) KeyboardType.Phone else KeyboardType.Text
         ),
+        textStyle = TextStyle(color = textDark, fontSize = 16.sp, fontWeight = FontWeight.Medium),
         colors = OutlinedTextFieldDefaults.colors(
+            focusedTextColor = textDark,
+            unfocusedTextColor = textDark,
             focusedBorderColor = Color(0xFF7E57C2),
             unfocusedBorderColor = Color(0xFFF3E8FF),
             focusedContainerColor = Color(0xFFFDFBFF),

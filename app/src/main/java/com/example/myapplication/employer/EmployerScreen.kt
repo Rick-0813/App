@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -73,7 +74,6 @@ fun EmployerScreen(viewModel: MainViewModel, navController: NavController) {
                             IconButton(onClick = { navController.navigate("company_details") }) {
                                 Icon(Icons.Default.Business, contentDescription = "Company Details", tint = primaryPurple)
                             }
-
                             IconButton(onClick = { navController.navigate("worker_profile") }) {
                                 Icon(Icons.Default.AccountCircle, contentDescription = null, tint = primaryPurple)
                             }
@@ -339,6 +339,7 @@ fun PostJobTab(viewModel: MainViewModel) {
     var jobToEdit by remember { mutableStateOf<com.example.myapplication.Job?>(null) }
 
     val primaryPurple = Color(0xFF7E57C2)
+    val textDark = Color(0xFF1E1B4B)
     val myPostedJobs = jobs.filter { it.employerEmail == currentUser?.email }
 
     Column(
@@ -392,7 +393,9 @@ fun PostJobTab(viewModel: MainViewModel) {
                     onValueChange = { title = it; showSuccess = false },
                     label = { Text("Job Title") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    textStyle = TextStyle(color = textDark, fontSize = 16.sp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = textDark, unfocusedTextColor = textDark)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -401,7 +404,9 @@ fun PostJobTab(viewModel: MainViewModel) {
                     onValueChange = { company = it; showSuccess = false },
                     label = { Text("Company Name") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    textStyle = TextStyle(color = textDark, fontSize = 16.sp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = textDark, unfocusedTextColor = textDark)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -418,7 +423,9 @@ fun PostJobTab(viewModel: MainViewModel) {
                     trailingIcon = { Text(".00", modifier = Modifier.padding(end = 16.dp)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    textStyle = TextStyle(color = textDark, fontSize = 16.sp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = textDark, unfocusedTextColor = textDark)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -428,7 +435,9 @@ fun PostJobTab(viewModel: MainViewModel) {
                     label = { Text("Job Description") },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3,
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    textStyle = TextStyle(color = textDark, fontSize = 16.sp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = textDark, unfocusedTextColor = textDark)
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -438,7 +447,9 @@ fun PostJobTab(viewModel: MainViewModel) {
                     label = { Text("Job Requirements (Enter each on a new line)") },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3,
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    textStyle = TextStyle(color = textDark, fontSize = 16.sp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = textDark, unfocusedTextColor = textDark)
                 )
 
                 Button(
@@ -481,16 +492,14 @@ fun PostJobTab(viewModel: MainViewModel) {
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(job.title, fontWeight = FontWeight.Bold, color = Color(0xFF1E1B4B))
+                            Text(job.title, fontWeight = FontWeight.Bold, color = textDark)
                             Text("${job.type} • ${job.salary}", fontSize = 12.sp, color = Color.Gray)
                         }
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            // 编辑按钮
                             IconButton(onClick = { jobToEdit = job }) {
                                 Icon(Icons.Default.Edit, contentDescription = "Edit Job", tint = primaryPurple)
                             }
-                            // 删除按钮（触发二次确认弹窗）
                             IconButton(onClick = { jobToDelete = job }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete Job", tint = Color.Red)
                             }
@@ -507,8 +516,8 @@ fun PostJobTab(viewModel: MainViewModel) {
             onDismissRequest = { jobToDelete = null },
             shape = RoundedCornerShape(20.dp),
             containerColor = Color.White,
-            title = { Text("Delete Listing? 🗑️", fontWeight = FontWeight.Bold, color = Color(0xFF1E1B4B)) },
-            text = { Text("Are you sure you want to remove \"${targetJob.title}\"? This action cannot be undone.", color = Color(0xFF4B5563)) },
+            title = { Text("Delete Listing? 🗑️", fontWeight = FontWeight.Bold, color = textDark) },
+            text = { Text("Are you sure you want to remove \"${targetJob.title}\"?", color = Color(0xFF4B5563)) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -535,49 +544,49 @@ fun PostJobTab(viewModel: MainViewModel) {
             onDismissRequest = { jobToEdit = null },
             shape = RoundedCornerShape(24.dp),
             containerColor = Color.White,
-            title = { Text("Edit Job Listing ✏️", fontWeight = FontWeight.Bold, color = Color(0xFF1E1B4B)) },
+            title = { Text("Edit Job Listing ✏️", fontWeight = FontWeight.Bold, color = textDark) },
             text = {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = editType == "Full-time",
-                            onClick = { editType = "Full-time" },
-                            label = { Text("Full-time") }
-                        )
-                        FilterChip(
-                            selected = editType == "Part-time",
-                            onClick = { editType = "Part-time" },
-                            label = { Text("Part-time") }
-                        )
+                        FilterChip(selected = editType == "Full-time", onClick = { editType = "Full-time" }, label = { Text("Full-time") })
+                        FilterChip(selected = editType == "Part-time", onClick = { editType = "Part-time" }, label = { Text("Part-time") })
                     }
                     OutlinedTextField(
                         value = editTitle,
                         onValueChange = { editTitle = it },
                         label = { Text("Job Title") },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = TextStyle(color = textDark, fontSize = 16.sp),
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = textDark, unfocusedTextColor = textDark)
                     )
                     OutlinedTextField(
                         value = editSalary,
                         onValueChange = { editSalary = it },
                         label = { Text("Salary") },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = TextStyle(color = textDark, fontSize = 16.sp),
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = textDark, unfocusedTextColor = textDark)
                     )
                     OutlinedTextField(
                         value = editDesc,
                         onValueChange = { editDesc = it },
                         label = { Text("Job Description") },
                         minLines = 2,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = TextStyle(color = textDark, fontSize = 16.sp),
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = textDark, unfocusedTextColor = textDark)
                     )
                     OutlinedTextField(
                         value = editReqs,
                         onValueChange = { editReqs = it },
                         label = { Text("Requirements (each on new line)") },
                         minLines = 2,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = TextStyle(color = textDark, fontSize = 16.sp),
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = textDark, unfocusedTextColor = textDark)
                     )
                 }
             },

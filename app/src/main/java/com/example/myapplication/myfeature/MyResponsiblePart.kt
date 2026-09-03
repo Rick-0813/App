@@ -1,23 +1,8 @@
 package com.example.myapplication.myfeature
 
-// MY RESPONSIBLE FEATURE FILE
-// Job Details + Apply Request (with Formal Profile Confirmation, Re-apply, and Withdraw)
-
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -35,34 +20,13 @@ import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Verified
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -85,7 +49,7 @@ private val CardBorder = Color(0xFFC2C6D4)
 private val SoftBlue = Color(0xFFEFF4FF)
 private val MutedText = Color(0xFF424752)
 
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyJobDetailsScreen(
     viewModel: MainViewModel,
@@ -162,9 +126,7 @@ fun MyJobDetailsScreen(
         }
     ) { padding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
+            modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 18.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
@@ -233,10 +195,12 @@ fun MyJobDetailsScreen(
                     OutlinedTextField(
                         value = messageText,
                         onValueChange = { messageText = it },
-                        placeholder = { Text("e.g. I am passionate about this role and available immediately.") },
+                        placeholder = { Text("e.g. I am passionate about this role.") },
                         minLines = 3,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        textStyle = TextStyle(color = Navy, fontSize = 16.sp),
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Navy, unfocusedTextColor = Navy)
                     )
                 }
             },
@@ -270,7 +234,7 @@ fun MyJobDetailsScreen(
             shape = RoundedCornerShape(20.dp),
             containerColor = Color.White,
             title = { Text("Withdraw Application? ⚠️", fontWeight = FontWeight.Bold, color = Navy) },
-            text = { Text("Are you sure you want to cancel your job application? The employer will not see your request anymore.", color = MutedText) },
+            text = { Text("Are you sure you want to cancel your job application?", color = MutedText) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -302,12 +266,7 @@ fun MyJobDetailsScreen(
 }
 
 @Composable
-private fun JobHeader(
-    job: Job,
-    application: JobApplication?,
-    companyRating: Float,
-    companyReviewCount: Int
-) {
+private fun JobHeader(job: Job, application: JobApplication?, companyRating: Float, companyReviewCount: Int) {
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text(job.title, color = Navy, fontSize = 30.sp, lineHeight = 35.sp, fontWeight = FontWeight.Bold)
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -315,11 +274,7 @@ private fun JobHeader(
             Spacer(Modifier.width(10.dp))
             Icon(Icons.Filled.Star, null, tint = BrightGreen, modifier = Modifier.size(21.dp))
             Text(
-                if (companyReviewCount == 0) {
-                    " No rating"
-                } else {
-                    " %.1f (%d)".format(companyRating, companyReviewCount)
-                },
+                if (companyReviewCount == 0) " No rating" else " %.1f (%d)".format(companyRating, companyReviewCount),
                 color = Navy,
                 fontWeight = FontWeight.Bold
             )
@@ -358,11 +313,7 @@ private fun RequirementsCard(job: Job) {
     val displayList = if (savedReqs.isNotEmpty()) {
         savedReqs.split("\n").map { it.trim() }.filter { it.isNotEmpty() }
     } else {
-        listOf(
-            "Be punctual and reliable.",
-            "Communicate clearly with the employer.",
-            "Follow workplace safety instructions."
-        )
+        listOf("Be punctual and reliable.", "Communicate clearly with the employer.", "Follow workplace safety instructions.")
     }
 
     Surface(
@@ -406,20 +357,8 @@ private fun ReviewsAndRatings(
         SectionTitle("Reviews & Ratings")
         Text("Two-way reviews build trust between workers and employers.", color = MutedText)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            RatingSummary(
-                modifier = Modifier.weight(1f),
-                title = "Company",
-                rating = viewModel.companyRating(job.company),
-                count = companyReviews.size,
-                company = true
-            )
-            RatingSummary(
-                modifier = Modifier.weight(1f),
-                title = "Worker",
-                rating = if (workerEmail.isBlank()) 0f else viewModel.workerRating(workerEmail),
-                count = workerReviews.size,
-                company = false
-            )
+            RatingSummary(modifier = Modifier.weight(1f), title = "Company", rating = viewModel.companyRating(job.company), count = companyReviews.size, company = true)
+            RatingSummary(modifier = Modifier.weight(1f), title = "Worker", rating = if (workerEmail.isBlank()) 0f else viewModel.workerRating(workerEmail), count = workerReviews.size, company = false)
         }
 
         if (application == null) {
@@ -437,29 +376,12 @@ private fun ReviewsAndRatings(
             ) {
                 Icon(if (isEmployer) Icons.Outlined.Person else Icons.Outlined.Business, null)
                 Spacer(Modifier.width(8.dp))
-                Text(
-                    if (alreadyReviewed) "Review Submitted" else if (isEmployer) "Employer → Review Worker" else "Worker → Review Company",
-                    fontWeight = FontWeight.Bold
-                )
+                Text(if (alreadyReviewed) "Review Submitted" else if (isEmployer) "Employer → Review Worker" else "Worker → Review Company", fontWeight = FontWeight.Bold)
             }
         }
 
-        ReviewGroup(
-            title = "Company Reviews",
-            subtitle = "Written by workers",
-            reviews = companyReviews,
-            viewModel = viewModel,
-            onEdit = { editingReview = it },
-            onDelete = { deletingReview = it }
-        )
-        ReviewGroup(
-            title = "Worker Reviews",
-            subtitle = "Written by employers",
-            reviews = workerReviews,
-            viewModel = viewModel,
-            onEdit = { editingReview = it },
-            onDelete = { deletingReview = it }
-        )
+        ReviewGroup(title = "Company Reviews", subtitle = "Written by workers", reviews = companyReviews, viewModel = viewModel, onEdit = { editingReview = it }, onDelete = { deletingReview = it })
+        ReviewGroup(title = "Worker Reviews", subtitle = "Written by employers", reviews = workerReviews, viewModel = viewModel, onEdit = { editingReview = it }, onDelete = { deletingReview = it })
     }
 
     editingReview?.let { review ->
@@ -479,45 +401,22 @@ private fun ReviewsAndRatings(
             onDismissRequest = { deletingReview = null },
             containerColor = Color.White,
             title = { Text("Delete Review?", color = Navy, fontWeight = FontWeight.Bold) },
-            text = { Text("This review will be permanently removed and the average rating will be recalculated.") },
+            text = { Text("This review will be permanently removed.") },
             confirmButton = {
-                Button(
-                    onClick = {
-                        if (viewModel.deleteReview(review.id)) deletingReview = null
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB3261E))
-                ) { Text("Delete") }
+                Button(onClick = { if (viewModel.deleteReview(review.id)) deletingReview = null }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB3261E))) { Text("Delete") }
             },
-            dismissButton = {
-                TextButton(onClick = { deletingReview = null }) { Text("Cancel") }
-            }
+            dismissButton = { TextButton(onClick = { deletingReview = null }) { Text("Cancel") } }
         )
     }
 }
 
 @Composable
-private fun RatingSummary(
-    modifier: Modifier,
-    title: String,
-    rating: Float,
-    count: Int,
-    company: Boolean
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, CardBorder)
-    ) {
+private fun RatingSummary(modifier: Modifier, title: String, rating: Float, count: Int, company: Boolean) {
+    Card(modifier = modifier, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White), border = BorderStroke(1.dp, CardBorder)) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Icon(if (company) Icons.Outlined.Business else Icons.Outlined.Person, null, tint = DeepBlue)
             Text(title, color = Navy, fontWeight = FontWeight.Bold)
-            Text(
-                if (count == 0) "No rating" else String.format(Locale.getDefault(), "%.1f", rating),
-                color = SuccessGreen,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Text(if (count == 0) "No rating" else String.format(Locale.getDefault(), "%.1f", rating), color = SuccessGreen, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Text("$count review${if (count == 1) "" else "s"}", color = MutedText, fontSize = 12.sp)
         }
     }
@@ -525,12 +424,7 @@ private fun RatingSummary(
 
 @Composable
 private fun LockedReview(message: String) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = SoftBlue,
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, CardBorder)
-    ) {
+    Surface(modifier = Modifier.fillMaxWidth(), color = SoftBlue, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, CardBorder)) {
         Row(modifier = Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Outlined.Lock, null, tint = DeepBlue)
             Spacer(Modifier.width(12.dp))
@@ -544,62 +438,29 @@ private fun SkillBadgeRow(badges: List<String>) {
     val shown = badges.ifEmpty { listOf("Verified Worker") }
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         items(shown) { badge ->
-            StatusPill(
-                text = badge + if (badge in badges) " ✓" else "",
-                green = badge in badges,
-                icon = if (badge == "Verified Worker") Icons.Outlined.Verified else Icons.Outlined.EmojiEvents
-            )
+            StatusPill(text = badge + if (badge in badges) " ✓" else "", green = badge in badges, icon = if (badge == "Verified Worker") Icons.Outlined.Verified else Icons.Outlined.EmojiEvents)
         }
     }
 }
 
 @Composable
-private fun ReviewGroup(
-    title: String,
-    subtitle: String,
-    reviews: List<JobReview>,
-    viewModel: MainViewModel,
-    onEdit: (JobReview) -> Unit,
-    onDelete: (JobReview) -> Unit
-) {
+private fun ReviewGroup(title: String, subtitle: String, reviews: List<JobReview>, viewModel: MainViewModel, onEdit: (JobReview) -> Unit, onDelete: (JobReview) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(title, color = Navy, fontWeight = FontWeight.Bold, fontSize = 18.sp)
         Text(subtitle, color = MutedText, fontSize = 12.sp)
         if (reviews.isEmpty()) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = Color.White,
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, CardBorder)
-            ) {
+            Surface(modifier = Modifier.fillMaxWidth(), color = Color.White, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, CardBorder)) {
                 Text("No reviews yet.", modifier = Modifier.padding(18.dp), color = MutedText)
             }
         } else {
-            reviews.forEach { review ->
-                ReviewCard(
-                    review = review,
-                    canManage = viewModel.canCurrentUserManageReview(review),
-                    onEdit = { onEdit(review) },
-                    onDelete = { onDelete(review) }
-                )
-            }
+            reviews.forEach { review -> ReviewCard(review = review, canManage = viewModel.canCurrentUserManageReview(review), onEdit = { onEdit(review) }, onDelete = { onDelete(review) }) }
         }
     }
 }
 
 @Composable
-private fun ReviewCard(
-    review: JobReview,
-    canManage: Boolean,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = Color.White,
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, CardBorder)
-    ) {
+private fun ReviewCard(review: JobReview, canManage: Boolean, onEdit: () -> Unit, onDelete: () -> Unit) {
+    Surface(modifier = Modifier.fillMaxWidth(), color = Color.White, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, CardBorder)) {
         Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
@@ -613,16 +474,9 @@ private fun ReviewCard(
                 Text("+ ${review.skillBadge} badge", color = SuccessGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
             if (canManage) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = onEdit) {
-                        Text("Edit", color = BrandBlue, fontWeight = FontWeight.Bold)
-                    }
-                    TextButton(onClick = onDelete) {
-                        Text("Delete", color = Color(0xFFB3261E), fontWeight = FontWeight.Bold)
-                    }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onEdit) { Text("Edit", color = BrandBlue, fontWeight = FontWeight.Bold) }
+                    TextButton(onClick = onDelete) { Text("Delete", color = Color(0xFFB3261E), fontWeight = FontWeight.Bold) }
                 }
             }
         }
@@ -630,11 +484,7 @@ private fun ReviewCard(
 }
 
 @Composable
-private fun EditReviewDialog(
-    review: JobReview,
-    onDismiss: () -> Unit,
-    onSave: (Int, String, String) -> Boolean
-) {
+private fun EditReviewDialog(review: JobReview, onDismiss: () -> Unit, onSave: (Int, String, String) -> Boolean) {
     var rating by remember(review.id) { mutableIntStateOf(review.rating) }
     var comment by remember(review.id) { mutableStateOf(review.comment) }
     var badge by remember(review.id) { mutableStateOf(review.skillBadge) }
@@ -648,20 +498,12 @@ private fun EditReviewDialog(
         shape = RoundedCornerShape(22.dp),
         title = { Text("Edit Review", color = Navy, fontWeight = FontWeight.Bold) },
         text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Text("Rating", color = Navy, fontWeight = FontWeight.Bold)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                     for (star in 1..5) {
                         IconButton(onClick = { rating = star }) {
-                            Icon(
-                                Icons.Filled.Star,
-                                "$star stars",
-                                tint = if (star <= rating) SuccessGreen else CardBorder,
-                                modifier = Modifier.size(31.dp)
-                            )
+                            Icon(Icons.Filled.Star, "$star stars", tint = if (star <= rating) SuccessGreen else CardBorder, modifier = Modifier.size(31.dp))
                         }
                     }
                 }
@@ -669,15 +511,7 @@ private fun EditReviewDialog(
                     Text("Skill Badge (optional)", color = Navy, fontWeight = FontWeight.Bold)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                         items(badgeOptions) { option ->
-                            FilterChip(
-                                selected = badge == option,
-                                onClick = { badge = if (badge == option) "" else option },
-                                label = { Text(option) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = BrightGreen,
-                                    selectedLabelColor = SuccessGreen
-                                )
-                            )
+                            FilterChip(selected = badge == option, onClick = { badge = if (badge == option) "" else option }, label = { Text(option) }, colors = FilterChipDefaults.filterChipColors(selectedContainerColor = BrightGreen, selectedLabelColor = SuccessGreen))
                         }
                     }
                 }
@@ -687,7 +521,9 @@ private fun EditReviewDialog(
                     label = { Text("Review comment") },
                     minLines = 4,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    textStyle = TextStyle(color = Navy, fontSize = 16.sp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Navy, unfocusedTextColor = Navy)
                 )
                 if (errorMessage.isNotBlank()) {
                     Text(errorMessage, color = Color(0xFFB3261E), fontSize = 13.sp)
@@ -695,33 +531,18 @@ private fun EditReviewDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    errorMessage = ""
-                    if (!onSave(rating, comment, badge)) {
-                        errorMessage = "Unable to update this review. Only the original reviewer can edit it."
-                    }
-                },
-                enabled = comment.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
-            ) { Text("Save Changes") }
+            Button(onClick = { errorMessage = ""; if (!onSave(rating, comment, badge)) errorMessage = "Unable to update." }, enabled = comment.isNotBlank(), colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)) { Text("Save Changes") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
 
 @Composable
-private fun JobActionBar(
-    isEmployer: Boolean,
-    application: JobApplication?,
-    onApply: () -> Unit,
-    onWithdraw: () -> Unit
-) {
+private fun JobActionBar(isEmployer: Boolean, application: JobApplication?, onApply: () -> Unit, onWithdraw: () -> Unit) {
     Surface(color = AppBackground, shadowElevation = 10.dp) {
         val isRejected = application?.status == "Rejected"
         val isPending = application?.status == "Pending"
         val canApply = !isEmployer && (application == null || isRejected)
-
         val label = when {
             isEmployer -> "Employer Account • View Applications"
             application == null -> "Apply Now"
@@ -730,36 +551,18 @@ private fun JobActionBar(
             else -> "Application ${application.status}"
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp)
-        ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
             Button(
                 onClick = onApply,
                 enabled = canApply,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
+                modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isRejected) Color(0xFFD97706) else SuccessGreen,
-                    disabledContainerColor = if (application?.status == "Completed") SuccessGreen else SoftBlue,
-                    disabledContentColor = if (application?.status == "Completed") Color.White else DeepBlue
-                )
-            ) {
-                Text(label, fontWeight = FontWeight.Bold)
-            }
+                colors = ButtonDefaults.buttonColors(containerColor = if (isRejected) Color(0xFFD97706) else SuccessGreen, disabledContainerColor = if (application?.status == "Completed") SuccessGreen else SoftBlue, disabledContentColor = if (application?.status == "Completed") Color.White else DeepBlue)
+            ) { Text(label, fontWeight = FontWeight.Bold) }
 
             if (!isEmployer && isPending) {
                 Spacer(modifier = Modifier.height(6.dp))
-                OutlinedButton(
-                    onClick = onWithdraw,
-                    modifier = Modifier.fillMaxWidth().height(44.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, Color(0xFFEF4444)),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFEF4444))
-                ) {
+                OutlinedButton(onClick = onWithdraw, modifier = Modifier.fillMaxWidth().height(44.dp), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, Color(0xFFEF4444)), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFEF4444))) {
                     Text("Withdraw Application", fontWeight = FontWeight.Bold)
                 }
             }
@@ -768,32 +571,12 @@ private fun JobActionBar(
 }
 
 @Composable
-fun EmployerReviewWorkerDialog(
-    viewModel: MainViewModel,
-    job: Job,
-    application: JobApplication,
-    onDismiss: () -> Unit
-) {
-    ReviewFormDialog(
-        isEmployer = true,
-        job = job,
-        application = application,
-        onDismiss = onDismiss,
-        onSubmit = { rating, comment, badge ->
-            viewModel.submitReview(job.id, application.id, rating, comment, badge)
-            onDismiss()
-        }
-    )
+fun EmployerReviewWorkerDialog(viewModel: MainViewModel, job: Job, application: JobApplication, onDismiss: () -> Unit) {
+    ReviewFormDialog(isEmployer = true, job = job, application = application, onDismiss = onDismiss, onSubmit = { rating, comment, badge -> viewModel.submitReview(job.id, application.id, rating, comment, badge); onDismiss() })
 }
 
 @Composable
-private fun ReviewFormDialog(
-    isEmployer: Boolean,
-    job: Job,
-    application: JobApplication,
-    onDismiss: () -> Unit,
-    onSubmit: (Int, String, String) -> Unit
-) {
+private fun ReviewFormDialog(isEmployer: Boolean, job: Job, application: JobApplication, onDismiss: () -> Unit, onSubmit: (Int, String, String) -> Unit) {
     var rating by remember { mutableIntStateOf(5) }
     var comment by remember { mutableStateOf("") }
     var badge by remember { mutableStateOf("") }
@@ -805,24 +588,13 @@ private fun ReviewFormDialog(
         shape = RoundedCornerShape(22.dp),
         title = { Text(if (isEmployer) "Review Worker" else "Review Company", color = Navy, fontWeight = FontWeight.Bold) },
         text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                Text(
-                    if (isEmployer) "${application.workerName} • ${job.title}" else "${job.company} • ${job.title}",
-                    color = MutedText
-                )
+            Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text(if (isEmployer) "${application.workerName} • ${job.title}" else "${job.company} • ${job.title}", color = MutedText)
                 Text("Rating", color = Navy, fontWeight = FontWeight.Bold)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                     for (star in 1..5) {
                         IconButton(onClick = { rating = star }) {
-                            Icon(
-                                Icons.Filled.Star,
-                                "$star stars",
-                                tint = if (star <= rating) SuccessGreen else CardBorder,
-                                modifier = Modifier.size(31.dp)
-                            )
+                            Icon(Icons.Filled.Star, "$star stars", tint = if (star <= rating) SuccessGreen else CardBorder, modifier = Modifier.size(31.dp))
                         }
                     }
                 }
@@ -830,15 +602,7 @@ private fun ReviewFormDialog(
                     Text("Award Skill Badge (optional)", color = Navy, fontWeight = FontWeight.Bold)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                         items(badgeOptions) { option ->
-                            FilterChip(
-                                selected = badge == option,
-                                onClick = { badge = if (badge == option) "" else option },
-                                label = { Text(option) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = BrightGreen,
-                                    selectedLabelColor = SuccessGreen
-                                )
-                            )
+                            FilterChip(selected = badge == option, onClick = { badge = if (badge == option) "" else option }, label = { Text(option) }, colors = FilterChipDefaults.filterChipColors(selectedContainerColor = BrightGreen, selectedLabelColor = SuccessGreen))
                         }
                     }
                 }
@@ -848,40 +612,24 @@ private fun ReviewFormDialog(
                     label = { Text("Review comment") },
                     minLines = 4,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    textStyle = TextStyle(color = Navy, fontSize = 16.sp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Navy, unfocusedTextColor = Navy)
                 )
             }
         },
         confirmButton = {
-            Button(
-                onClick = { onSubmit(rating, comment, badge) },
-                enabled = comment.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
-            ) { Text("Submit Review") }
+            Button(onClick = { onSubmit(rating, comment, badge) }, enabled = comment.isNotBlank(), colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)) { Text("Submit Review") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
 
 @Composable
-private fun StatusPill(
-    text: String,
-    green: Boolean = false,
-    icon: androidx.compose.ui.graphics.vector.ImageVector? = null
-) {
-    Surface(
-        color = if (green) BrightGreen else SoftBlue,
-        shape = RoundedCornerShape(50),
-        border = BorderStroke(1.dp, if (green) BrightGreen else Color(0xFFD5E2F7))
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            icon?.let {
-                Icon(it, null, tint = if (green) SuccessGreen else DeepBlue, modifier = Modifier.size(15.dp))
-                Spacer(Modifier.width(5.dp))
-            }
+private fun StatusPill(text: String, green: Boolean = false, icon: androidx.compose.ui.graphics.vector.ImageVector? = null) {
+    Surface(color = if (green) BrightGreen else SoftBlue, shape = RoundedCornerShape(50), border = BorderStroke(1.dp, if (green) BrightGreen else Color(0xFFD5E2F7))) {
+        Row(modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            icon?.let { Icon(it, null, tint = if (green) SuccessGreen else DeepBlue, modifier = Modifier.size(15.dp)); Spacer(Modifier.width(5.dp)) }
             Text(text, color = if (green) SuccessGreen else DeepBlue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
     }
@@ -889,19 +637,8 @@ private fun StatusPill(
 
 @Composable
 private fun RatingStars(rating: Float, size: Dp) {
-    Row {
-        repeat(5) { index ->
-            Icon(
-                Icons.Filled.Star,
-                null,
-                tint = if (index + 1 <= rating) SuccessGreen else CardBorder,
-                modifier = Modifier.size(size)
-            )
-        }
-    }
+    Row { repeat(5) { index -> Icon(Icons.Filled.Star, null, tint = if (index + 1 <= rating) SuccessGreen else CardBorder, modifier = Modifier.size(size)) } }
 }
 
 @Composable
-private fun SectionTitle(text: String) {
-    Text(text, color = Navy, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-}
+private fun SectionTitle(text: String) { Text(text, color = Navy, fontSize = 22.sp, fontWeight = FontWeight.Bold) }

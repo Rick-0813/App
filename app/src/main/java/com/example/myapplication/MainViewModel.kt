@@ -7,16 +7,30 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+// --- 🚀 Supabase 相关导入 ---
+import io.github.jan.supabase.postgrest.from
+import kotlinx.serialization.Serializable
+
 private const val TAG = "JobBoom_Log"
+
+@Serializable
+data class UserInput(
+    val name: String,
+    val email: String
+)
 
 data class UserAccount(
     val name: String = "",
@@ -104,7 +118,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     suspend fun checkUserExists(account: String): UserAccount? {
         val cleanAccount = account.trim()
-        Log.d(TAG, "Checking account: $cleanAccount")
         val user = _allUsers.value.find {
             it.email.equals(cleanAccount, ignoreCase = true) ||
                     it.name.equals(cleanAccount, ignoreCase = true) ||
@@ -120,6 +133,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _allUsers.value = _allUsers.value + newUser
         currentUser = newUser
         saveAllDataToLocal()
+
+        // 🚀 注册时自动异步同步写入 Supabase 数据库
+        try {
+            withContext(Dispatchers.IO) {
+                supabase.from("contact").insert(UserInput(name.trim(), email.trim()))
+            }
+            Log.d(TAG, "Successfully synced registered user to Supabase")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to sync registered user to Supabase: ${e.message}")
+        }
+
         return Result.success(Unit)
     }
 
@@ -140,21 +164,50 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     suspend fun loginWithGoogle(email: String, name: String): Result<Unit> {
-        Log.d(TAG, "Google Login attempt: $email")
         val existing = checkUserExists(email)
         return if (existing != null) {
             currentUser = existing
             _savedJobIds.value = existing.savedJobs.toSet()
             saveAllDataToLocal()
-            Log.d(TAG, "Google Login successful for ${existing.name}")
             Result.success(Unit)
         } else {
             val newUser = UserAccount(name, email, "", "G-AUTH-PASS", "Worker")
             _allUsers.value = _allUsers.value + newUser
             currentUser = newUser
             saveAllDataToLocal()
-            Log.d(TAG, "Google Register+Login successful")
+
+            // 🚀 新 Google 用户第一次登录时自动同步写入 Supabase 数据库
+            try {
+                withContext(Dispatchers.IO) {
+                    supabase.from("contact").insert(UserInput(name.trim(), email.trim()))
+                }
+                Log.d(TAG, "Successfully synced Google user to Supabase")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to sync Google user to Supabase: ${e.message}")
+            }
+
             Result.success(Unit)
+        }
+    }
+
+    // 🚀 在个人中心绑定/更新 Gmail 并同步到 Supabase
+    suspend fun linkGoogleAccount(gmail: String, name: String) {
+        val user = currentUser ?: return
+        val updatedUser = user.copy(email = gmail.trim())
+        currentUser = updatedUser
+
+        _allUsers.value = _allUsers.value.map {
+            if (it.phone == user.phone || it.name.equals(user.name, ignoreCase = true)) updatedUser else it
+        }
+        saveAllDataToLocal()
+
+        try {
+            withContext(Dispatchers.IO) {
+                supabase.from("contact").insert(UserInput(name.trim(), gmail.trim()))
+            }
+            Log.d(TAG, "Successfully linked and synced Gmail to Supabase")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to sync linked Gmail: ${e.message}")
         }
     }
 
@@ -198,7 +251,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun hasSubmittedReview(applicationId: Int, direction: ReviewDirection): Boolean =
         _reviews.value.any { it.applicationId == applicationId && it.direction == direction }
 
-    // 级联注销账号（只保留这一个）
+    // 🚀 级联注销账号：同时清理本地缓存并从 Supabase 云端删除
     fun deleteCurrentUserAccount() {
         val user = currentUser ?: return
         val userEmail = user.email
@@ -215,6 +268,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         currentUser = null
         _savedJobIds.value = emptySet()
         saveAllDataToLocal()
+
+        // 🚀 异步从 Supabase 云端删除该用户的 contact 记录
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                supabase.from("contact").delete {
+                    filter {
+                        eq("email", userEmail)
+                    }
+                }
+                Log.d(TAG, "Successfully deleted user from Supabase cloud")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to delete user from Supabase cloud: ${e.message}")
+            }
+        }
     }
 
     fun submitReview(
@@ -280,15 +347,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 review.copy(
                     rating = newRating.coerceIn(1, 5),
                     comment = newComment.trim(),
-                    skillBadge = if (review.direction == ReviewDirection.EMPLOYER_TO_WORKER) {
-                        newSkillBadge
-                    } else {
-                        ""
-                    }
+                    skillBadge = if (review.direction == ReviewDirection.EMPLOYER_TO_WORKER) newSkillBadge else ""
                 )
-            } else {
-                review
-            }
+            } else review
         }
         saveAllDataToLocal()
         return true
@@ -358,7 +419,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     suspend fun updateUserProfile(newName: String, newEmail: String, newPhone: String, newPassword: String) {
         val user = currentUser ?: return
         val updatedUser = user.copy(
-            name = newName.ifBlank { user.name },
+            name = if (newName.isBlank()) user.name else newName,
             phone = newPhone.trim(),
             password = if (newPassword.isNotBlank()) newPassword else user.password
         )
@@ -483,7 +544,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         editor.putString("all_reviews", reviewsArr.toString())
 
         editor.apply()
-        Log.d(TAG, "Persistence saved successfully.")
     }
 
     private fun loadDataFromLocal() {
@@ -535,56 +595,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _jobs.value = list
         } else {
             _jobs.value = listOf(
-                Job(
-                    id = 1,
-                    title = "Software Engineer",
-                    company = "Google",
-                    salary = "$150,000",
-                    description = "Build cutting-edge mobile apps using Jetpack Compose and Kotlin.",
-                    requirements = "Proficient in Kotlin and Jetpack Compose\nExperience with Git version control\nStrong problem-solving and algorithmic thinking",
-                    type = "Full-time",
-                    employerEmail = "derrick.t@gmail.com"
-                ),
-                Job(
-                    id = 2,
-                    title = "Product Manager",
-                    company = "Meta",
-                    salary = "$140,000",
-                    description = "Lead multidisciplinary product teams and drive product delivery.",
-                    requirements = "Experience with Agile and Scrum methodologies\nProven track record in roadmap definition\nExcellent interpersonal and presentation skills",
-                    type = "Full-time",
-                    employerEmail = "derrick.t@gmail.com"
-                ),
-                Job(
-                    id = 3,
-                    title = "UI/UX Designer",
-                    company = "Apple",
-                    salary = "$130,000",
-                    description = "Design intuitive user interfaces and polished design systems.",
-                    requirements = "Proficiency with Figma and modern wireframing tools\nPortfolio showcasing clean mobile application UX\nStrong eye for typography, layouts, and accessibility",
-                    type = "Part-time",
-                    employerEmail = "derrick.t@gmail.com"
-                ),
-                Job(
-                    id = 4,
-                    title = "Delivery Helper",
-                    company = "GreenGro",
-                    salary = "RM 2,500.00",
-                    description = "Assist drivers with daily grocery load distribution and drop-offs.",
-                    requirements = "Punctual, physically fit, and dependable\nPossess a valid B2 motorcycle license\nFriendly customer service attitude",
-                    type = "Part-time",
-                    employerEmail = "jobboom.pro@gmail.com"
-                ),
-                Job(
-                    id = 5,
-                    title = "Cashier",
-                    company = "Fresh Market",
-                    salary = "RM 1,800.00",
-                    description = "Handle point-of-sale checkout and manage cashier drawer reconciliations.",
-                    requirements = "Basic numerical literacy and mental math\nHonest, disciplined, and customer-oriented\nComfortable working rotating weekend shifts",
-                    type = "Part-time",
-                    employerEmail = "jobboom.pro@gmail.com"
-                )
+                Job(1, "Software Engineer", "Google", "$150,000", "Build cutting-edge mobile apps.", "Full-time", "derrick.t@gmail.com", "Proficient in Kotlin"),
+                Job(2, "Product Manager", "Meta", "$140,000", "Lead multidisciplinary product teams.", "Full-time", "derrick.t@gmail.com", "Experience with Agile"),
+                Job(3, "UI/UX Designer", "Apple", "$130,000", "Design intuitive user interfaces.", "Part-time", "derrick.t@gmail.com", "Proficiency with Figma"),
+                Job(4, "Delivery Helper", "GreenGro", "RM 2,500.00", "Assist drivers with grocery loads.", "Part-time", "jobboom.pro@gmail.com", "Punctual and reliable"),
+                Job(5, "Cashier", "Fresh Market", "RM 1,800.00", "Handle point-of-sale checkout.", "Part-time", "jobboom.pro@gmail.com", "Basic numerical literacy")
             )
         }
 
@@ -594,24 +609,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val arr = JSONArray(appsStr)
             for (i in 0 until arr.length()) {
                 val obj = arr.getJSONObject(i)
-                list.add(
-                    JobApplication(
-                        id = obj.getInt("id"),
-                        jobId = obj.getInt("jobId"),
-                        workerName = obj.getString("workerName"),
-                        workerEmail = obj.getString("workerEmail"),
-                        message = obj.optString("message", ""),
-                        status = obj.getString("status")
-                    )
-                )
+                list.add(JobApplication(obj.getInt("id"), obj.getInt("jobId"), obj.getString("workerName"), obj.getString("workerEmail"), obj.optString("message", ""), obj.getString("status")))
             }
-            _applications.value = list.ifEmpty {
-                listOf(JobApplication(100, 4, "Derrick Tan", "derrick@test.com", "I have relevant experience and am available immediately.", "Completed"))
-            }
+            _applications.value = list
         } else {
-            _applications.value = listOf(
-                JobApplication(100, 4, "Derrick Tan", "derrick@test.com", "I have relevant experience and am available immediately.", "Completed")
-            )
+            _applications.value = listOf(JobApplication(100, 4, "Derrick Tan", "derrick@test.com", "I am available immediately.", "Completed"))
         }
 
         val reviewsStr = prefs.getString("all_reviews", null)
@@ -620,25 +622,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val arr = JSONArray(reviewsStr)
             for (i in 0 until arr.length()) {
                 val obj = arr.getJSONObject(i)
-                val direction = runCatching {
-                    ReviewDirection.valueOf(obj.getString("direction"))
-                }.getOrDefault(ReviewDirection.WORKER_TO_COMPANY)
-                list.add(
-                    JobReview(
-                        id = obj.getInt("id"),
-                        jobId = obj.getInt("jobId"),
-                        applicationId = obj.getInt("applicationId"),
-                        direction = direction,
-                        reviewerName = obj.getString("reviewerName"),
-                        reviewerEmail = obj.optString("reviewerEmail", ""),
-                        subjectName = obj.getString("subjectName"),
-                        subjectKey = obj.getString("subjectKey"),
-                        rating = obj.getInt("rating"),
-                        comment = obj.getString("comment"),
-                        date = obj.optString("date"),
-                        skillBadge = obj.optString("skillBadge")
-                    )
-                )
+                val direction = runCatching { ReviewDirection.valueOf(obj.getString("direction")) }.getOrDefault(ReviewDirection.WORKER_TO_COMPANY)
+                list.add(JobReview(obj.getInt("id"), obj.getInt("jobId"), obj.getInt("applicationId"), direction, obj.getString("reviewerName"), obj.optString("reviewerEmail", ""), obj.getString("subjectName"), obj.getString("subjectKey"), obj.getInt("rating"), obj.getString("comment"), obj.optString("date"), obj.optString("skillBadge")))
             }
             _reviews.value = list
         }

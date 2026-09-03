@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -39,7 +40,7 @@ fun JobSearchScreen(viewModel: MainViewModel, navController: NavController) {
     var searchQuery by remember { mutableStateOf("") }
     var minSalaryFilter by remember { mutableIntStateOf(0) }
     var selectedTypeFilter by remember { mutableStateOf("All") }
-    var showFilters by remember { mutableStateOf(false) } // 控制 Filter 展开/收起
+    var showFilters by remember { mutableStateOf(false) }
     var currentBottomTab by remember { mutableIntStateOf(0) }
 
     val primaryPurple = Color(0xFF7E57C2)
@@ -108,59 +109,30 @@ fun JobSearchScreen(viewModel: MainViewModel, navController: NavController) {
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(20.dp),
                             singleLine = true,
+                            textStyle = TextStyle(color = textDark, fontSize = 16.sp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = primaryPurple,
                                 unfocusedBorderColor = Color(0xFFDED9FF),
                                 focusedContainerColor = Color.White.copy(alpha = 0.5f),
                                 unfocusedContainerColor = Color.White.copy(alpha = 0.5f),
-                                focusedTextColor = textDark
+                                focusedTextColor = textDark,
+                                unfocusedTextColor = textDark
                             )
                         )
 
-                        //filter can hide
                         AnimatedVisibility(visible = showFilters) {
                             Column {
                                 Spacer(modifier = Modifier.height(12.dp))
                                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    item {
-                                        FilterChip(
-                                            selected = minSalaryFilter == 0,
-                                            onClick = { minSalaryFilter = 0 },
-                                            label = { Text("All") }
-                                        )
-                                    }
-                                    item {
-                                        FilterChip(
-                                            selected = minSalaryFilter == 5000,
-                                            onClick = { minSalaryFilter = 5000 },
-                                            label = { Text("> 5k") }
-                                        )
-                                    }
-                                    item {
-                                        FilterChip(
-                                            selected = minSalaryFilter == 20000,
-                                            onClick = { minSalaryFilter = 20000 },
-                                            label = { Text("> 20k") }
-                                        )
-                                    }
-                                    item {
-                                        FilterChip(
-                                            selected = minSalaryFilter == 100000,
-                                            onClick = { minSalaryFilter = 100000 },
-                                            label = { Text("> 100k") }
-                                        )
-                                    }
+                                    item { FilterChip(selected = minSalaryFilter == 0, onClick = { minSalaryFilter = 0 }, label = { Text("All") }) }
+                                    item { FilterChip(selected = minSalaryFilter == 5000, onClick = { minSalaryFilter = 5000 }, label = { Text("> 5k") }) }
+                                    item { FilterChip(selected = minSalaryFilter == 20000, onClick = { minSalaryFilter = 20000 }, label = { Text("> 20k") }) }
+                                    item { FilterChip(selected = minSalaryFilter == 100000, onClick = { minSalaryFilter = 100000 }, label = { Text("> 100k") }) }
                                 }
-
                                 Spacer(modifier = Modifier.height(8.dp))
-
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     listOf("All", "Full-time", "Part-time").forEach { type ->
-                                        FilterChip(
-                                            selected = selectedTypeFilter == type,
-                                            onClick = { selectedTypeFilter = type },
-                                            label = { Text(type) }
-                                        )
+                                        FilterChip(selected = selectedTypeFilter == type, onClick = { selectedTypeFilter = type }, label = { Text(type) })
                                     }
                                 }
                             }
@@ -184,10 +156,7 @@ fun JobSearchScreen(viewModel: MainViewModel, navController: NavController) {
                             onClick = { currentBottomTab = idx },
                             icon = { Icon(icon, contentDescription = null) },
                             label = { Text(label, fontWeight = FontWeight.Bold) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = primaryPurple,
-                                indicatorColor = Color(0xFFDED9FF)
-                            )
+                            colors = NavigationBarItemDefaults.colors(selectedIconColor = primaryPurple, indicatorColor = Color(0xFFDED9FF))
                         )
                     }
                 }
@@ -195,23 +164,9 @@ fun JobSearchScreen(viewModel: MainViewModel, navController: NavController) {
         ) { padding ->
             Box(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp)) {
                 when (currentBottomTab) {
-                    0 -> JobTab(
-                        jobs = jobs,
-                        applications = applications,
-                        savedIds = savedJobIds,
-                        query = searchQuery,
-                        minSalary = minSalaryFilter,
-                        selectedType = selectedTypeFilter,
-                        viewModel = viewModel
-                    ) { jobId ->
-                        navController.navigate("job_details/$jobId/-1")
-                    }
-                    1 -> SavedTab(jobs, savedJobIds, viewModel) { jobId ->
-                        navController.navigate("job_details/$jobId/-1")
-                    }
-                    2 -> AppsTab(applications, jobs, viewModel) { jobId ->
-                        navController.navigate("job_details/$jobId/-1")
-                    }
+                    0 -> JobTab(jobs, applications, savedJobIds, searchQuery, minSalaryFilter, selectedTypeFilter, viewModel) { navController.navigate("job_details/$it/-1") }
+                    1 -> SavedTab(jobs, savedJobIds, viewModel) { navController.navigate("job_details/$it/-1") }
+                    2 -> AppsTab(applications, jobs, viewModel) { navController.navigate("job_details/$it/-1") }
                 }
             }
         }
@@ -225,25 +180,11 @@ private fun extractNumericSalary(raw: String): Int {
 }
 
 @Composable
-fun JobTab(
-    jobs: List<Job>,
-    applications: List<JobApplication>,
-    savedIds: Set<Int>,
-    query: String,
-    minSalary: Int,
-    selectedType: String,
-    viewModel: MainViewModel,
-    onOpenJob: (Int) -> Unit
-) {
-    val filledJobIds = applications
-        .filter { it.status == "Approved" || it.status == "Completed" }
-        .map { it.jobId }
-        .toSet()
-
+fun JobTab(jobs: List<Job>, applications: List<JobApplication>, savedIds: Set<Int>, query: String, minSalary: Int, selectedType: String, viewModel: MainViewModel, onOpenJob: (Int) -> Unit) {
+    val filledJobIds = applications.filter { it.status == "Approved" || it.status == "Completed" }.map { it.jobId }.toSet()
     val filtered = jobs.filter { job ->
         val notFilled = job.id !in filledJobIds
-        val matchSearch = job.title.contains(query, ignoreCase = true) ||
-                job.company.contains(query, ignoreCase = true)
+        val matchSearch = job.title.contains(query, ignoreCase = true) || job.company.contains(query, ignoreCase = true)
         val matchSalary = extractNumericSalary(job.salary) >= minSalary
         val matchType = if (selectedType == "All") true else job.type.equals(selectedType, ignoreCase = true)
         notFilled && matchSearch && matchSalary && matchType
@@ -254,30 +195,15 @@ fun JobTab(
             Text("No jobs found 🧸", color = Color.White, fontWeight = FontWeight.Bold)
         }
     } else {
-        LazyColumn(
-            contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            items(filtered) { job ->
-                JobCard(job, savedIds.contains(job.id), viewModel, onOpenJob)
-            }
+        LazyColumn(contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            items(filtered) { job -> JobCard(job, savedIds.contains(job.id), viewModel, onOpenJob) }
         }
     }
 }
 
 @Composable
-fun JobCard(
-    job: Job,
-    isSaved: Boolean,
-    viewModel: MainViewModel,
-    onOpenJob: (Int) -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F3FF)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
+fun JobCard(job: Job, isSaved: Boolean, viewModel: MainViewModel, onOpenJob: (Int) -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F3FF)), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column(modifier = Modifier.weight(1f)) {
@@ -285,11 +211,7 @@ fun JobCard(
                     Text(job.company, fontSize = 14.sp, color = Color(0xFF7E57C2))
                 }
                 IconButton(onClick = { viewModel.toggleSaveJob(job.id) }) {
-                    Icon(
-                        if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = null,
-                        tint = if (isSaved) Color.Red else Color(0xFF7E57C2)
-                    )
+                    Icon(if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = null, tint = if (isSaved) Color.Red else Color(0xFF7E57C2))
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
@@ -303,12 +225,7 @@ fun JobCard(
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = { onOpenJob(job.id) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7E57C2))
-            ) {
+            Button(onClick = { onOpenJob(job.id) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7E57C2))) {
                 Text("View Details ✨", fontWeight = FontWeight.Bold, color = Color.White)
             }
         }
@@ -316,35 +233,21 @@ fun JobCard(
 }
 
 @Composable
-fun SavedTab(
-    jobs: List<Job>,
-    savedIds: Set<Int>,
-    viewModel: MainViewModel,
-    onOpenJob: (Int) -> Unit
-) {
+fun SavedTab(jobs: List<Job>, savedIds: Set<Int>, viewModel: MainViewModel, onOpenJob: (Int) -> Unit) {
     val saved = jobs.filter { savedIds.contains(it.id) }
     Column(modifier = Modifier.padding(top = 16.dp)) {
         Text("Saved for Later 💖", fontSize = 22.sp, fontWeight = FontWeight.Black, color = Color.White)
         Spacer(modifier = Modifier.height(16.dp))
         if (saved.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Your list is empty 🧺", color = Color.White.copy(alpha = 0.7f))
-            }
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Your list is empty 🧺", color = Color.White.copy(alpha = 0.7f)) }
         } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                items(saved) { job -> JobCard(job, true, viewModel, onOpenJob) }
-            }
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) { items(saved) { job -> JobCard(job, true, viewModel, onOpenJob) } }
         }
     }
 }
 
 @Composable
-fun AppsTab(
-    apps: List<JobApplication>,
-    jobs: List<Job>,
-    viewModel: MainViewModel,
-    onOpenJob: (Int) -> Unit
-) {
+fun AppsTab(apps: List<JobApplication>, jobs: List<Job>, viewModel: MainViewModel, onOpenJob: (Int) -> Unit) {
     val myApps = apps.filter { it.workerEmail == viewModel.currentUser?.email }
     var applicationToCancel by remember { mutableStateOf<JobApplication?>(null) }
 
@@ -352,74 +255,28 @@ fun AppsTab(
         Text("My Job 🌈", fontSize = 22.sp, fontWeight = FontWeight.Black, color = Color.White)
         Spacer(modifier = Modifier.height(16.dp))
         if (myApps.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No applications yet 🎈", color = Color.White.copy(alpha = 0.7f))
-            }
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No applications yet 🎈", color = Color.White.copy(alpha = 0.7f)) }
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(myApps) { app ->
                     val job = jobs.find { it.id == app.jobId }
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onOpenJob(app.jobId) },
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F3FF))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                    Card(modifier = Modifier.fillMaxWidth().clickable { onOpenJob(app.jobId) }, shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F3FF))) {
+                        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(job?.title ?: "Job", fontWeight = FontWeight.Bold, color = Color(0xFF1E1B4B))
                                 Text(job?.company ?: "Company", fontSize = 12.sp, color = Color(0xFF7E57C2))
-
                                 if (app.message.isNotBlank()) {
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = "Note: “${app.message}”",
-                                        fontSize = 11.sp,
-                                        fontStyle = FontStyle.Italic,
-                                        color = Color(0xFF6B7280),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
+                                    Text(text = "Note: “${app.message}”", fontSize = 11.sp, fontStyle = FontStyle.Italic, color = Color(0xFF6B7280), maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                             }
-
                             Column(horizontalAlignment = Alignment.End) {
-                                Surface(
-                                    color = when(app.status) {
-                                        "Approved", "Completed" -> Color(0xFFDCFCE7)
-                                        "Rejected" -> Color(0xFFFEE2E2)
-                                        else -> Color(0xFFFEF9C3)
-                                    },
-                                    shape = CircleShape
-                                ) {
-                                    Text(
-                                        app.status,
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = when(app.status) {
-                                            "Approved", "Completed" -> Color(0xFF16A34A)
-                                            "Rejected" -> Color.Red
-                                            else -> Color(0xFF854D0E)
-                                        }
-                                    )
+                                Surface(color = when(app.status) { "Approved", "Completed" -> Color(0xFFDCFCE7); "Rejected" -> Color(0xFFFEE2E2); else -> Color(0xFFFEF9C3) }, shape = CircleShape) {
+                                    Text(app.status, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = when(app.status) { "Approved", "Completed" -> Color(0xFF16A34A); "Rejected" -> Color.Red; else -> Color(0xFF854D0E) })
                                 }
-
                                 if (app.status == "Pending") {
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = "Withdraw",
-                                        color = Color(0xFFEF4444),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier
-                                            .clickable { applicationToCancel = app }
-                                            .padding(4.dp)
-                                    )
+                                    Text(text = "Withdraw", color = Color(0xFFEF4444), fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { applicationToCancel = app }.padding(4.dp))
                                 }
                             }
                         }
@@ -435,19 +292,11 @@ fun AppsTab(
             shape = RoundedCornerShape(20.dp),
             containerColor = Color.White,
             title = { Text("Withdraw Application? ⚠️", fontWeight = FontWeight.Bold, color = Color(0xFF1E1B4B)) },
-            text = { Text("Are you sure you want to cancel your job application? The employer will not see your request anymore.", color = Color(0xFF4B5563)) },
+            text = { Text("Are you sure you want to cancel your job application?", color = Color(0xFF4B5563)) },
             confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.cancelApplication(targetApp.id)
-                        applicationToCancel = null
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444))
-                ) { Text("Confirm Withdraw", color = Color.White) }
+                Button(onClick = { viewModel.cancelApplication(targetApp.id); applicationToCancel = null }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444))) { Text("Confirm Withdraw", color = Color.White) }
             },
-            dismissButton = {
-                TextButton(onClick = { applicationToCancel = null }) { Text("Keep Application", color = Color.Gray) }
-            }
+            dismissButton = { TextButton(onClick = { applicationToCancel = null }) { Text("Keep Application", color = Color.Gray) } }
         )
     }
 }
