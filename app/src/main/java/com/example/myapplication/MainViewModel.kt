@@ -58,6 +58,7 @@ data class JobReview(
     val applicationId: Int = 0,
     val direction: ReviewDirection = ReviewDirection.WORKER_TO_COMPANY,
     val reviewerName: String = "",
+    val reviewerEmail: String = "",
     val subjectName: String = "",
     val subjectKey: String = "",
     val rating: Int = 5,
@@ -71,6 +72,10 @@ internal fun calculateAverageRating(ratings: List<Int>): Float =
 
 internal fun normalizedCompanyKey(companyName: String): String =
     "company:${companyName.trim().lowercase(Locale.ROOT)}"
+
+internal fun isReviewOwner(review: JobReview, user: UserAccount): Boolean =
+    review.reviewerEmail.equals(user.email, ignoreCase = true) ||
+            (review.reviewerEmail.isBlank() && review.reviewerName.equals(user.name, ignoreCase = true))
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -238,6 +243,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             applicationId = applicationId,
             direction = direction,
             reviewerName = user.name,
+            reviewerEmail = user.email,
             subjectName = if (direction == ReviewDirection.WORKER_TO_COMPANY) job.company else application.workerName,
             subjectKey = if (direction == ReviewDirection.WORKER_TO_COMPANY) {
                 normalizedCompanyKey(job.company)
@@ -250,6 +256,50 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             skillBadge = if (direction == ReviewDirection.EMPLOYER_TO_WORKER) skillBadge else ""
         )
         _reviews.value = listOf(review) + _reviews.value
+        saveAllDataToLocal()
+        return true
+    }
+
+    fun canCurrentUserManageReview(review: JobReview): Boolean {
+        val user = currentUser ?: return false
+        return isReviewOwner(review, user)
+    }
+
+    fun updateReview(
+        reviewId: Int,
+        newRating: Int,
+        newComment: String,
+        newSkillBadge: String = ""
+    ): Boolean {
+        val user = currentUser ?: return false
+        val existingReview = _reviews.value.find { it.id == reviewId } ?: return false
+        if (!isReviewOwner(existingReview, user) || newComment.isBlank()) return false
+
+        _reviews.value = _reviews.value.map { review ->
+            if (review.id == reviewId) {
+                review.copy(
+                    rating = newRating.coerceIn(1, 5),
+                    comment = newComment.trim(),
+                    skillBadge = if (review.direction == ReviewDirection.EMPLOYER_TO_WORKER) {
+                        newSkillBadge
+                    } else {
+                        ""
+                    }
+                )
+            } else {
+                review
+            }
+        }
+        saveAllDataToLocal()
+        return true
+    }
+
+    fun deleteReview(reviewId: Int): Boolean {
+        val user = currentUser ?: return false
+        val existingReview = _reviews.value.find { it.id == reviewId } ?: return false
+        if (!isReviewOwner(existingReview, user)) return false
+
+        _reviews.value = _reviews.value.filterNot { it.id == reviewId }
         saveAllDataToLocal()
         return true
     }
@@ -421,6 +471,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             obj.put("applicationId", review.applicationId)
             obj.put("direction", review.direction.name)
             obj.put("reviewerName", review.reviewerName)
+            obj.put("reviewerEmail", review.reviewerEmail)
             obj.put("subjectName", review.subjectName)
             obj.put("subjectKey", review.subjectKey)
             obj.put("rating", review.rating)
@@ -579,6 +630,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         applicationId = obj.getInt("applicationId"),
                         direction = direction,
                         reviewerName = obj.getString("reviewerName"),
+                        reviewerEmail = obj.optString("reviewerEmail", ""),
                         subjectName = obj.getString("subjectName"),
                         subjectKey = obj.getString("subjectKey"),
                         rating = obj.getInt("rating"),

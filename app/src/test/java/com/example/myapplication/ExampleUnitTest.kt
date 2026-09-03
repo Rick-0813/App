@@ -28,4 +28,14 @@ class ExampleUnitTest {
         assertEquals("company:company a", normalizedCompanyKey("company a"))
         assertNotEquals(normalizedCompanyKey("Company A"), normalizedCompanyKey("Company B"))
     }
+
+    @Test
+    fun onlyOriginalReviewerCanUpdateOrDeleteReview() {
+        val review = JobReview(reviewerName = "Worker A", reviewerEmail = "worker-a@test.com")
+        val owner = UserAccount(name = "Worker A", email = "worker-a@test.com")
+        val anotherUser = UserAccount(name = "Worker B", email = "worker-b@test.com")
+
+        assertTrue(isReviewOwner(review, owner))
+        assertFalse(isReviewOwner(review, anotherUser))
+    }
 }

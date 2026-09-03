@@ -1,5 +1,6 @@
 package com.example.myapplication
 
+import android.net.http.HttpResponseCache.install
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -40,6 +41,7 @@ import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 
@@ -102,7 +104,8 @@ fun AppNavigation() {
             RoleSelectionScreen(
                 viewModel = sharedViewModel,
                 onSelectWorker = { navController.navigate("worker_search") },
-                onSelectEmployer = { navController.navigate("employer_dashboard") }
+                onSelectEmployer = { navController.navigate("employer_dashboard") },
+                onGoToSupabase = { navController.navigate("supabase_contacts") }
             )
         }
 
@@ -166,9 +169,6 @@ fun AppNavigation() {
     }
 }
 
-<<<<<<< Updated upstream
-//asdasdasdasdasdasdasdasd
-=======
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserListScreen(onBack: () -> Unit) {
@@ -386,4 +386,3 @@ fun UserListScreen(onBack: () -> Unit) {
         }
     }
 }
->>>>>>> Stashed changes

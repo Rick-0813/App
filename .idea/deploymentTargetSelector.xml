@@ -4,23 +4,6 @@
     <selectionStates>
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-09-03T04:53:47.378866200Z">
-          <Target type="DEFAULT_BOOT">
-            <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\Chong Liang\.android\avd\Pixel_9.avd" />
-            </handle>
-          </Target>
-        </DropdownSelection>
-        <DialogSelection>
-          <targets>
-            <Target type="DEFAULT_BOOT">
-              <handle>
-                <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\derri_mhfhn7f\.android\avd\honor.avd" />
-              </handle>
-            </Target>
-          </targets>
-        </DialogSelection>
-=======
         <DropdownSelection timestamp="2026-09-03T02:12:44.668977700Z">
           <Target type="DEFAULT_BOOT">
             <template>
@@ -29,7 +12,6 @@
           </Target>
         </DropdownSelection>
         <DialogSelection />
->>>>>>> Stashed changes
       </SelectionState>
     </selectionStates>
   </component>

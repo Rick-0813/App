@@ -399,6 +399,8 @@ private fun ReviewsAndRatings(
     val workerReviews = reviews.filter {
         it.subjectKey == workerEmail && it.direction == ReviewDirection.EMPLOYER_TO_WORKER
     }
+    var editingReview by remember { mutableStateOf<JobReview?>(null) }
+    var deletingReview by remember { mutableStateOf<JobReview?>(null) }
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         SectionTitle("Reviews & Ratings")
@@ -442,8 +444,54 @@ private fun ReviewsAndRatings(
             }
         }
 
-        ReviewGroup("Company Reviews", "Written by workers", companyReviews)
-        ReviewGroup("Worker Reviews", "Written by employers", workerReviews)
+        ReviewGroup(
+            title = "Company Reviews",
+            subtitle = "Written by workers",
+            reviews = companyReviews,
+            viewModel = viewModel,
+            onEdit = { editingReview = it },
+            onDelete = { deletingReview = it }
+        )
+        ReviewGroup(
+            title = "Worker Reviews",
+            subtitle = "Written by employers",
+            reviews = workerReviews,
+            viewModel = viewModel,
+            onEdit = { editingReview = it },
+            onDelete = { deletingReview = it }
+        )
+    }
+
+    editingReview?.let { review ->
+        EditReviewDialog(
+            review = review,
+            onDismiss = { editingReview = null },
+            onSave = { rating, comment, badge ->
+                viewModel.updateReview(review.id, rating, comment, badge).also { updated ->
+                    if (updated) editingReview = null
+                }
+            }
+        )
+    }
+
+    deletingReview?.let { review ->
+        AlertDialog(
+            onDismissRequest = { deletingReview = null },
+            containerColor = Color.White,
+            title = { Text("Delete Review?", color = Navy, fontWeight = FontWeight.Bold) },
+            text = { Text("This review will be permanently removed and the average rating will be recalculated.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (viewModel.deleteReview(review.id)) deletingReview = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB3261E))
+                ) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { deletingReview = null }) { Text("Cancel") }
+            }
+        )
     }
 }
 
@@ -506,7 +554,14 @@ private fun SkillBadgeRow(badges: List<String>) {
 }
 
 @Composable
-private fun ReviewGroup(title: String, subtitle: String, reviews: List<JobReview>) {
+private fun ReviewGroup(
+    title: String,
+    subtitle: String,
+    reviews: List<JobReview>,
+    viewModel: MainViewModel,
+    onEdit: (JobReview) -> Unit,
+    onDelete: (JobReview) -> Unit
+) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(title, color = Navy, fontWeight = FontWeight.Bold, fontSize = 18.sp)
         Text(subtitle, color = MutedText, fontSize = 12.sp)
@@ -520,13 +575,25 @@ private fun ReviewGroup(title: String, subtitle: String, reviews: List<JobReview
                 Text("No reviews yet.", modifier = Modifier.padding(18.dp), color = MutedText)
             }
         } else {
-            reviews.take(4).forEach { review -> ReviewCard(review) }
+            reviews.forEach { review ->
+                ReviewCard(
+                    review = review,
+                    canManage = viewModel.canCurrentUserManageReview(review),
+                    onEdit = { onEdit(review) },
+                    onDelete = { onDelete(review) }
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun ReviewCard(review: JobReview) {
+private fun ReviewCard(
+    review: JobReview,
+    canManage: Boolean,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = Color.White,
@@ -545,8 +612,102 @@ private fun ReviewCard(review: JobReview) {
             if (review.skillBadge.isNotBlank()) {
                 Text("+ ${review.skillBadge} badge", color = SuccessGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
+            if (canManage) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onEdit) {
+                        Text("Edit", color = BrandBlue, fontWeight = FontWeight.Bold)
+                    }
+                    TextButton(onClick = onDelete) {
+                        Text("Delete", color = Color(0xFFB3261E), fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
         }
     }
+}
+
+@Composable
+private fun EditReviewDialog(
+    review: JobReview,
+    onDismiss: () -> Unit,
+    onSave: (Int, String, String) -> Boolean
+) {
+    var rating by remember(review.id) { mutableIntStateOf(review.rating) }
+    var comment by remember(review.id) { mutableStateOf(review.comment) }
+    var badge by remember(review.id) { mutableStateOf(review.skillBadge) }
+    var errorMessage by remember(review.id) { mutableStateOf("") }
+    val canEditBadge = review.direction == ReviewDirection.EMPLOYER_TO_WORKER
+    val badgeOptions = listOf("Reliable", "Punctual", "Customer Service", "Quick Learner", "Team Player")
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color.White,
+        shape = RoundedCornerShape(22.dp),
+        title = { Text("Edit Review", color = Navy, fontWeight = FontWeight.Bold) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text("Rating", color = Navy, fontWeight = FontWeight.Bold)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                    for (star in 1..5) {
+                        IconButton(onClick = { rating = star }) {
+                            Icon(
+                                Icons.Filled.Star,
+                                "$star stars",
+                                tint = if (star <= rating) SuccessGreen else CardBorder,
+                                modifier = Modifier.size(31.dp)
+                            )
+                        }
+                    }
+                }
+                if (canEditBadge) {
+                    Text("Skill Badge (optional)", color = Navy, fontWeight = FontWeight.Bold)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        items(badgeOptions) { option ->
+                            FilterChip(
+                                selected = badge == option,
+                                onClick = { badge = if (badge == option) "" else option },
+                                label = { Text(option) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = BrightGreen,
+                                    selectedLabelColor = SuccessGreen
+                                )
+                            )
+                        }
+                    }
+                }
+                OutlinedTextField(
+                    value = comment,
+                    onValueChange = { comment = it },
+                    label = { Text("Review comment") },
+                    minLines = 4,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                if (errorMessage.isNotBlank()) {
+                    Text(errorMessage, color = Color(0xFFB3261E), fontSize = 13.sp)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    errorMessage = ""
+                    if (!onSave(rating, comment, badge)) {
+                        errorMessage = "Unable to update this review. Only the original reviewer can edit it."
+                    }
+                },
+                enabled = comment.isNotBlank(),
+                colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
+            ) { Text("Save Changes") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }
 
 @Composable
