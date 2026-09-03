@@ -1,6 +1,7 @@
 package com.example.myapplication.employer
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -82,6 +83,7 @@ fun EmployerScreen(viewModel: MainViewModel, navController: NavController) {
                 }
             },
             bottomBar = {
+                // 🚀 底部导航栏扩展为 4 个 Tab：Apps, Post, Reviews, History
                 NavigationBar(
                     containerColor = softSurface,
                     modifier = Modifier.clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
@@ -107,6 +109,13 @@ fun EmployerScreen(viewModel: MainViewModel, navController: NavController) {
                         label = { Text("Reviews", fontWeight = FontWeight.Bold) },
                         colors = NavigationBarItemDefaults.colors(selectedIconColor = primaryPurple, indicatorColor = Color(0xFFDED9FF))
                     )
+                    NavigationBarItem(
+                        selected = currentBottomTab == 3,
+                        onClick = { currentBottomTab = 3 },
+                        icon = { Icon(Icons.Default.History, contentDescription = null) },
+                        label = { Text("History", fontWeight = FontWeight.Bold) },
+                        colors = NavigationBarItemDefaults.colors(selectedIconColor = primaryPurple, indicatorColor = Color(0xFFDED9FF))
+                    )
                 }
             }
         ) { padding ->
@@ -126,9 +135,101 @@ fun EmployerScreen(viewModel: MainViewModel, navController: NavController) {
                             navController.navigate("job_details/$jobId/$applicationId")
                         }
                     )
+                    3 -> BossHistoryTab(jobs = jobs, applications = myApplications, viewModel = viewModel) { jobId, applicationId ->
+                        navController.navigate("job_details/$jobId/$applicationId")
+                    }
                 }
             }
         }
+    }
+}
+
+// 🚀 新增：Boss 端专属的 History 页面（按公司归类展示自己发布过和已完成的工作）
+@Composable
+fun BossHistoryTab(
+    jobs: List<com.example.myapplication.Job>,
+    applications: List<com.example.myapplication.JobApplication>,
+    viewModel: MainViewModel,
+    onOpenJob: (Int, Int) -> Unit
+) {
+    val currentBossEmail = viewModel.currentUser?.email ?: ""
+    val myJobs = jobs.filter { it.employerEmail.equals(currentBossEmail, ignoreCase = true) }
+
+    // 按照公司名称进行分组
+    val groupedByCompany = myJobs.groupBy { it.company.ifBlank { "My Company" } }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = 16.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        Text("Employer History 📜", fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color.White)
+        Text("All your posted jobs and completed records grouped by company", fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (myJobs.isEmpty()) {
+            Box(modifier = Modifier.fillMaxWidth().height(300.dp), contentAlignment = Alignment.Center) {
+                Text("No job history yet 🧸", color = Color.White.copy(alpha = 0.7f), fontWeight = FontWeight.Bold)
+            }
+        } else {
+            groupedByCompany.forEach { (companyName, companyJobs) ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F3FF)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Business, contentDescription = null, tint = Color(0xFF7E57C2), modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = companyName, fontSize = 18.sp, fontWeight = FontWeight.Black, color = Color(0xFF1E1B4B))
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+                        HorizontalDivider(color = Color(0xFFE0E7FF))
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        companyJobs.forEach { job ->
+                            // 查找该职位对应的申请记录
+                            val jobApps = applications.filter { it.jobId == job.id }
+                            val completedApp = jobApps.find { it.status == "Completed" }
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp)
+                                    .clickable {
+                                        onOpenJob(job.id, completedApp?.id ?: jobApps.firstOrNull()?.id ?: -1)
+                                    },
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(text = job.title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF1E1B4B))
+                                    Text(text = "${job.type} • ${job.salary}", fontSize = 12.sp, color = Color.Gray)
+                                }
+
+                                Surface(
+                                    color = if (completedApp != null) Color(0xFFDCFCE7) else Color(0xFFE0E7FF),
+                                    shape = CircleShape
+                                ) {
+                                    Text(
+                                        text = if (completedApp != null) "Completed ⭐" else "${jobApps.size} Applicants",
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (completedApp != null) Color(0xFF16A34A) else Color(0xFF4338CA)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 

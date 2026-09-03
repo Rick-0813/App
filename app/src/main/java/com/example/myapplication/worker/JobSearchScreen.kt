@@ -149,14 +149,18 @@ fun JobSearchScreen(viewModel: MainViewModel, navController: NavController) {
                     listOf(
                         Triple(0, "Jobs", Icons.Default.Work),
                         Triple(1, "Saved", Icons.Default.Bookmark),
-                        Triple(2, "My Job", Icons.AutoMirrored.Filled.Assignment)
+                        Triple(2, "My Job", Icons.AutoMirrored.Filled.Assignment),
+                        Triple(3, "History", Icons.Default.History) // 🚀 新增 History Tab
                     ).forEach { (idx, label, icon) ->
                         NavigationBarItem(
                             selected = currentBottomTab == idx,
                             onClick = { currentBottomTab = idx },
                             icon = { Icon(icon, contentDescription = null) },
                             label = { Text(label, fontWeight = FontWeight.Bold) },
-                            colors = NavigationBarItemDefaults.colors(selectedIconColor = primaryPurple, indicatorColor = Color(0xFFDED9FF))
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = primaryPurple,
+                                indicatorColor = Color(0xFFDED9FF)
+                            )
                         )
                     }
                 }

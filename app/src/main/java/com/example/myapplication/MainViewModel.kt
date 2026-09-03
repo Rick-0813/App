@@ -594,15 +594,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             _jobs.value = list
         } else {
-            _jobs.value = listOf(
-                Job(1, "Software Engineer", "Google", "$150,000", "Build cutting-edge mobile apps.", "Full-time", "derrick.t@gmail.com", "Proficient in Kotlin"),
-                Job(2, "Product Manager", "Meta", "$140,000", "Lead multidisciplinary product teams.", "Full-time", "derrick.t@gmail.com", "Experience with Agile"),
-                Job(3, "UI/UX Designer", "Apple", "$130,000", "Design intuitive user interfaces.", "Part-time", "derrick.t@gmail.com", "Proficiency with Figma"),
-                Job(4, "Delivery Helper", "GreenGro", "RM 2,500.00", "Assist drivers with grocery loads.", "Part-time", "jobboom.pro@gmail.com", "Punctual and reliable"),
-                Job(5, "Cashier", "Fresh Market", "RM 1,800.00", "Handle point-of-sale checkout.", "Part-time", "jobboom.pro@gmail.com", "Basic numerical literacy")
-            )
+            _jobs.value = emptyList()
         }
-
         val appsStr = prefs.getString("all_apps", null)
         if (!appsStr.isNullOrEmpty()) {
             val list = mutableListOf<JobApplication>()
