@@ -38,7 +38,8 @@ data class UserAccount(
     val phone: String = "",
     val password: String = "",
     val role: String = "Worker",
-    val savedJobs: List<Int> = emptyList()
+    val savedJobs: List<Int> = emptyList(),
+    val industry: String = "Technology & Services"
 )
 
 data class Job(
@@ -416,12 +417,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         saveAllDataToLocal()
     }
 
-    suspend fun updateUserProfile(newName: String, newEmail: String, newPhone: String, newPassword: String) {
+    suspend fun updateUserProfile(newName: String, newEmail: String, newPhone: String, newPassword: String, newIndustry: String = "") {
         val user = currentUser ?: return
         val updatedUser = user.copy(
             name = if (newName.isBlank()) user.name else newName,
             phone = newPhone.trim(),
-            password = if (newPassword.isNotBlank()) newPassword else user.password
+            password = if (newPassword.isNotBlank()) newPassword else user.password,
+            industry = if (newIndustry.isNotBlank()) newIndustry else user.industry
         )
         currentUser = updatedUser
         _allUsers.value = _allUsers.value.map {
@@ -487,6 +489,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             obj.put("phone", u.phone)
             obj.put("password", u.password)
             obj.put("role", u.role)
+            obj.put("industry", u.industry)
             obj.put("savedJobs", JSONArray(u.savedJobs))
             usersArr.put(obj)
         }
@@ -560,7 +563,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 list.add(UserAccount(
                     obj.getString("name"), obj.getString("email"),
                     obj.getString("phone"), obj.getString("password"),
-                    obj.getString("role"), savedList
+                    obj.getString("role"),
+                    savedList,
+                    obj.optString("industry", "Technology & Services"),
                 ))
             }
             _allUsers.value = list

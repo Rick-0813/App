@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Business
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Star
@@ -17,11 +18,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.myapplication.MainViewModel
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -29,6 +32,9 @@ import java.util.Locale
 fun CompanyDetailsScreen(viewModel: MainViewModel, navController: NavController) {
     val user = viewModel.currentUser
     val jobs by viewModel.jobs.collectAsState()
+    val scope = rememberCoroutineScope()
+
+    var showEditDialog by remember { mutableStateOf(false) }
 
     val companyName = remember(jobs, user) {
         jobs.find { it.employerEmail.equals(user?.email, ignoreCase = true) }?.company
@@ -57,6 +63,11 @@ fun CompanyDetailsScreen(viewModel: MainViewModel, navController: NavController)
                     navigationIcon = {
                         IconButton(onClick = { navController.popBackStack() }) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = Color.White)
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { showEditDialog = true }) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit Contact Info", tint = Color.White)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -155,10 +166,132 @@ fun CompanyDetailsScreen(viewModel: MainViewModel, navController: NavController)
                         CompanyInfoRow(icon = Icons.Default.Phone, title = "Business Phone", value = user?.phone?.ifEmpty { "Not provided" } ?: "Not provided")
                         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = primaryPurple.copy(alpha = 0.1f))
 
-                        CompanyInfoRow(icon = Icons.Default.Business, title = "Industry", value = "Technology & Services")
+                        CompanyInfoRow(
+                            icon = Icons.Default.Business,
+                            title = "Industry",
+                            value = user?.industry?.ifEmpty { "Technology & Services" } ?: "Technology & Services"
+                        )
                     }
                 }
             }
+        }
+
+        if (showEditDialog) {
+            var editPhone by remember(user) { mutableStateOf(user?.phone ?: "") }
+            var editIndustry by remember(user) { mutableStateOf(user?.industry?.ifEmpty { "Technology & Services" } ?: "Technology & Services") }
+            var expanded by remember { mutableStateOf(false) } //Control popupmenu
+
+            val industries = listOf(
+                "Technology & Services",
+                "Healthcare & Medicine",
+                "Education & Training",
+                "Food & Beverage",
+                "Finance & Banking",
+                "Arts, Entertainment & Media",
+            )
+
+            AlertDialog(
+                onDismissRequest = { showEditDialog = false },
+                shape = RoundedCornerShape(24.dp),
+                containerColor = Color.White,
+                title = { Text("Edit Contact Info ✏️", fontWeight = FontWeight.Bold, color = textDark) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(
+                            text = "Note: Email cannot be changed as it securely links your active jobs and reviews together.",
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
+
+                        OutlinedTextField(
+                            value = user?.email ?: "",
+                            onValueChange = {},
+                            label = { Text("Business Email") },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = false,
+                            textStyle = TextStyle(color = Color.Gray, fontSize = 16.sp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                disabledTextColor = Color.Gray,
+                                disabledBorderColor = Color(0xFFF3E8FF),
+                                disabledLabelColor = Color.Gray
+                            )
+                        )
+
+                        OutlinedTextField(
+                            value = editPhone,
+                            onValueChange = { editPhone = it },
+                            label = { Text("Business Phone") },
+                            modifier = Modifier.fillMaxWidth(),
+                            textStyle = TextStyle(color = textDark, fontSize = 16.sp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = textDark,
+                                unfocusedTextColor = textDark,
+                                focusedBorderColor = primaryPurple,
+                                unfocusedBorderColor = Color(0xFFF3E8FF)
+                            )
+                        )
+
+
+                        ExposedDropdownMenuBox(
+                            expanded = expanded,
+                            onExpandedChange = { expanded = !expanded }
+                        ) {
+                            OutlinedTextField(
+                                value = editIndustry,
+                                onValueChange = {},
+                                readOnly = true, // Prevents manual typing
+                                label = { Text("Industry") },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .menuAnchor(),
+                                textStyle = TextStyle(color = textDark, fontSize = 16.sp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = textDark,
+                                    unfocusedTextColor = textDark,
+                                    focusedBorderColor = primaryPurple,
+                                    unfocusedBorderColor = Color(0xFFF3E8FF)
+                                )
+                            )
+                            ExposedDropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false },
+                                modifier = Modifier.background(Color.White)
+                            ) {
+                                industries.forEach { selection ->
+                                    DropdownMenuItem(
+                                        text = { Text(selection, color = textDark) },
+                                        onClick = {
+                                            editIndustry = selection
+                                            expanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                viewModel.updateUserProfile(
+                                    newName = user?.name ?: "",
+                                    newEmail = user?.email ?: "",
+                                    newPhone = editPhone,
+                                    newPassword = "",
+                                    newIndustry = editIndustry
+                                )
+                                showEditDialog = false
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = primaryPurple)
+                    ) { Text("Save Changes") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showEditDialog = false }) { Text("Cancel", color = Color.Gray) }
+                }
+            )
         }
     }
 }
