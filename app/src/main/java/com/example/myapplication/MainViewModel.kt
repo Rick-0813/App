@@ -20,7 +20,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-// --- 🚀 Supabase 相关导入 ---
 import io.github.jan.supabase.postgrest.from
 import kotlinx.serialization.Serializable
 
@@ -119,12 +118,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     suspend fun checkUserExists(account: String): UserAccount? {
         val cleanAccount = account.trim()
-        val user = _allUsers.value.find {
+        return _allUsers.value.find {
             it.email.equals(cleanAccount, ignoreCase = true) ||
                     it.name.equals(cleanAccount, ignoreCase = true) ||
                     it.phone == cleanAccount
         }
-        return user
     }
 
     suspend fun registerUser(name: String, email: String, password: String, role: String): Result<Unit> {
@@ -135,7 +133,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         currentUser = newUser
         saveAllDataToLocal()
 
-        // 🚀 注册时自动异步同步写入 Supabase 数据库
         try {
             withContext(Dispatchers.IO) {
                 supabase.from("contact").insert(UserInput(name.trim(), email.trim()))
@@ -177,7 +174,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             currentUser = newUser
             saveAllDataToLocal()
 
-            // 🚀 新 Google 用户第一次登录时自动同步写入 Supabase 数据库
             try {
                 withContext(Dispatchers.IO) {
                     supabase.from("contact").insert(UserInput(name.trim(), email.trim()))
@@ -191,7 +187,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // 🚀 在个人中心绑定/更新 Gmail 并同步到 Supabase
     suspend fun linkGoogleAccount(gmail: String, name: String) {
         val user = currentUser ?: return
         val updatedUser = user.copy(email = gmail.trim())
@@ -252,7 +247,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun hasSubmittedReview(applicationId: Int, direction: ReviewDirection): Boolean =
         _reviews.value.any { it.applicationId == applicationId && it.direction == direction }
 
-    // 🚀 级联注销账号：同时清理本地缓存并从 Supabase 云端删除
     fun deleteCurrentUserAccount() {
         val user = currentUser ?: return
         val userEmail = user.email
@@ -270,7 +264,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _savedJobIds.value = emptySet()
         saveAllDataToLocal()
 
-        // 🚀 异步从 Supabase 云端删除该用户的 contact 记录
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 supabase.from("contact").delete {
@@ -565,7 +558,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     obj.getString("phone"), obj.getString("password"),
                     obj.getString("role"),
                     savedList,
-                    obj.optString("industry", "Technology & Services"),
+                    obj.optString("industry", "Technology & Services")
                 ))
             }
             _allUsers.value = list
@@ -599,19 +592,80 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             _jobs.value = list
         } else {
-            _jobs.value = emptyList()
+            _jobs.value = listOf(
+                Job(
+                    id = 1,
+                    title = "Software Engineer",
+                    company = "Google",
+                    salary = "$150,000",
+                    description = "Build cutting-edge mobile apps using Jetpack Compose and Kotlin.",
+                    requirements = "Proficient in Kotlin and Jetpack Compose\nExperience with Git version control\nStrong problem-solving skills",
+                    type = "Full-time",
+                    employerEmail = "derrick.t@gmail.com"
+                ),
+                Job(
+                    id = 2,
+                    title = "Product Manager",
+                    company = "Meta",
+                    salary = "$140,000",
+                    description = "Lead multidisciplinary product teams and drive product delivery.",
+                    requirements = "Experience with Agile methodologies\nStrong roadmap planning\nExcellent communication",
+                    type = "Full-time",
+                    employerEmail = "derrick.t@gmail.com"
+                ),
+                Job(
+                    id = 3,
+                    title = "UI/UX Designer",
+                    company = "Apple",
+                    salary = "$130,000",
+                    description = "Design intuitive user interfaces and polished design systems.",
+                    requirements = "Proficiency with Figma\nPortfolio showcasing clean UX\nEye for typography and layout",
+                    type = "Part-time",
+                    employerEmail = "derrick.t@gmail.com"
+                ),
+                Job(
+                    id = 4,
+                    title = "Delivery Helper",
+                    company = "GreenGro",
+                    salary = "RM 2,500.00",
+                    description = "Assist drivers with daily grocery distribution.",
+                    requirements = "Punctual and dependable\nValid B2 motorcycle license\nFriendly attitude",
+                    type = "Part-time",
+                    employerEmail = "jobboom.pro@gmail.com"
+                ),
+                Job(
+                    id = 5,
+                    title = "Cashier",
+                    company = "Fresh Market",
+                    salary = "RM 1,800.00",
+                    description = "Handle checkout and manage cashier drawer reconciliations.",
+                    requirements = "Basic numerical literacy\nHonest and disciplined\nCustomer oriented",
+                    type = "Part-time",
+                    employerEmail = "jobboom.pro@gmail.com"
+                )
+            )
         }
+
         val appsStr = prefs.getString("all_apps", null)
         if (!appsStr.isNullOrEmpty()) {
             val list = mutableListOf<JobApplication>()
             val arr = JSONArray(appsStr)
             for (i in 0 until arr.length()) {
                 val obj = arr.getJSONObject(i)
-                list.add(JobApplication(obj.getInt("id"), obj.getInt("jobId"), obj.getString("workerName"), obj.getString("workerEmail"), obj.optString("message", ""), obj.getString("status")))
+                list.add(JobApplication(
+                    obj.getInt("id"),
+                    obj.getInt("jobId"),
+                    obj.getString("workerName"),
+                    obj.getString("workerEmail"),
+                    obj.optString("message", ""),
+                    obj.getString("status")
+                ))
             }
             _applications.value = list
         } else {
-            _applications.value = listOf(JobApplication(100, 4, "Derrick Tan", "derrick@test.com", "I am available immediately.", "Completed"))
+            _applications.value = listOf(
+                JobApplication(100, 4, "Derrick Tan", "derrick@test.com", "I am available immediately.", "Completed")
+            )
         }
 
         val reviewsStr = prefs.getString("all_reviews", null)
@@ -620,8 +674,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val arr = JSONArray(reviewsStr)
             for (i in 0 until arr.length()) {
                 val obj = arr.getJSONObject(i)
-                val direction = runCatching { ReviewDirection.valueOf(obj.getString("direction")) }.getOrDefault(ReviewDirection.WORKER_TO_COMPANY)
-                list.add(JobReview(obj.getInt("id"), obj.getInt("jobId"), obj.getInt("applicationId"), direction, obj.getString("reviewerName"), obj.optString("reviewerEmail", ""), obj.getString("subjectName"), obj.getString("subjectKey"), obj.getInt("rating"), obj.getString("comment"), obj.optString("date"), obj.optString("skillBadge")))
+                val direction = runCatching {
+                    ReviewDirection.valueOf(obj.getString("direction"))
+                }.getOrDefault(ReviewDirection.WORKER_TO_COMPANY)
+
+                list.add(JobReview(
+                    obj.getInt("id"),
+                    obj.getInt("jobId"),
+                    obj.getInt("applicationId"),
+                    direction,
+                    obj.getString("reviewerName"),
+                    obj.optString("reviewerEmail", ""),
+                    obj.getString("subjectName"),
+                    obj.getString("subjectKey"),
+                    obj.getInt("rating"),
+                    obj.getString("comment"),
+                    obj.optString("date"),
+                    obj.optString("skillBadge")
+                ))
             }
             _reviews.value = list
         }

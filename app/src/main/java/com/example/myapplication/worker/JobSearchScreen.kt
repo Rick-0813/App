@@ -1,6 +1,7 @@
 package com.example.myapplication.worker
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -38,7 +39,7 @@ fun JobSearchScreen(viewModel: MainViewModel, navController: NavController) {
     val applications by viewModel.applications.collectAsState()
 
     var searchQuery by remember { mutableStateOf("") }
-    var minSalaryFilter by remember { mutableIntStateOf(0) }
+    var selectedSalaryRange by remember { mutableStateOf("All") }
     var selectedTypeFilter by remember { mutableStateOf("All") }
     var showFilters by remember { mutableStateOf(false) }
     var currentBottomTab by remember { mutableIntStateOf(0) }
@@ -101,7 +102,7 @@ fun JobSearchScreen(viewModel: MainViewModel, navController: NavController) {
                                         Icon(
                                             Icons.Default.Tune,
                                             contentDescription = "Filter",
-                                            tint = if (showFilters || minSalaryFilter > 0 || selectedTypeFilter != "All") primaryPurple else Color.Gray
+                                            tint = if (showFilters || selectedSalaryRange != "All" || selectedTypeFilter != "All") primaryPurple else Color.Gray
                                         )
                                     }
                                 }
@@ -123,16 +124,29 @@ fun JobSearchScreen(viewModel: MainViewModel, navController: NavController) {
                         AnimatedVisibility(visible = showFilters) {
                             Column {
                                 Spacer(modifier = Modifier.height(12.dp))
+                                Text("Salary Range", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = primaryPurple)
+                                Spacer(modifier = Modifier.height(4.dp))
                                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    item { FilterChip(selected = minSalaryFilter == 0, onClick = { minSalaryFilter = 0 }, label = { Text("All") }) }
-                                    item { FilterChip(selected = minSalaryFilter == 5000, onClick = { minSalaryFilter = 5000 }, label = { Text("> 5k") }) }
-                                    item { FilterChip(selected = minSalaryFilter == 20000, onClick = { minSalaryFilter = 20000 }, label = { Text("> 20k") }) }
-                                    item { FilterChip(selected = minSalaryFilter == 100000, onClick = { minSalaryFilter = 100000 }, label = { Text("> 100k") }) }
+                                    listOf("All", "< 3k", "3k - 10k", "> 10k").forEach { range ->
+                                        item {
+                                            FilterChip(
+                                                selected = selectedSalaryRange == range,
+                                                onClick = { selectedSalaryRange = range },
+                                                label = { Text(range) }
+                                            )
+                                        }
+                                    }
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
+                                Text("Job Type", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = primaryPurple)
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     listOf("All", "Full-time", "Part-time").forEach { type ->
-                                        FilterChip(selected = selectedTypeFilter == type, onClick = { selectedTypeFilter = type }, label = { Text(type) })
+                                        FilterChip(
+                                            selected = selectedTypeFilter == type,
+                                            onClick = { selectedTypeFilter = type },
+                                            label = { Text(type) }
+                                        )
                                     }
                                 }
                             }
@@ -150,7 +164,7 @@ fun JobSearchScreen(viewModel: MainViewModel, navController: NavController) {
                         Triple(0, "Jobs", Icons.Default.Work),
                         Triple(1, "Saved", Icons.Default.Bookmark),
                         Triple(2, "My Job", Icons.AutoMirrored.Filled.Assignment),
-                        Triple(3, "History", Icons.Default.History) // 🚀 新增 History Tab
+                        Triple(3, "History", Icons.Default.History)
                     ).forEach { (idx, label, icon) ->
                         NavigationBarItem(
                             selected = currentBottomTab == idx,
@@ -168,9 +182,23 @@ fun JobSearchScreen(viewModel: MainViewModel, navController: NavController) {
         ) { padding ->
             Box(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp)) {
                 when (currentBottomTab) {
-                    0 -> JobTab(jobs, applications, savedJobIds, searchQuery, minSalaryFilter, selectedTypeFilter, viewModel) { navController.navigate("job_details/$it/-1") }
-                    1 -> SavedTab(jobs, savedJobIds, viewModel) { navController.navigate("job_details/$it/-1") }
-                    2 -> AppsTab(applications, jobs, viewModel) { navController.navigate("job_details/$it/-1") }
+                    0 -> JobTab(
+                        jobs = jobs,
+                        applications = applications,
+                        savedIds = savedJobIds,
+                        query = searchQuery,
+                        salaryRange = selectedSalaryRange,
+                        selectedType = selectedTypeFilter,
+                        viewModel = viewModel,
+                        onResetFilters = {
+                            searchQuery = ""
+                            selectedSalaryRange = "All"
+                            selectedTypeFilter = "All"
+                        }
+                    ) { navController.navigate("job_details/$it/-1") }
+                    1 -> SavedTab(jobs, applications, savedJobIds, viewModel) { navController.navigate("job_details/$it/-1") }
+                    2 -> AppsTab(applications, jobs, viewModel, showCompletedOnly = false) { navController.navigate("job_details/$it/-1") }
+                    3 -> AppsTab(applications, jobs, viewModel, showCompletedOnly = true) { navController.navigate("job_details/$it/-1") }
                 }
             }
         }
@@ -184,29 +212,56 @@ private fun extractNumericSalary(raw: String): Int {
 }
 
 @Composable
-fun JobTab(jobs: List<Job>, applications: List<JobApplication>, savedIds: Set<Int>, query: String, minSalary: Int, selectedType: String, viewModel: MainViewModel, onOpenJob: (Int) -> Unit) {
+fun JobTab(
+    jobs: List<Job>,
+    applications: List<JobApplication>,
+    savedIds: Set<Int>,
+    query: String,
+    salaryRange: String,
+    selectedType: String,
+    viewModel: MainViewModel,
+    onResetFilters: () -> Unit,
+    onOpenJob: (Int) -> Unit
+) {
     val filledJobIds = applications.filter { it.status == "Approved" || it.status == "Completed" }.map { it.jobId }.toSet()
     val filtered = jobs.filter { job ->
         val notFilled = job.id !in filledJobIds
         val matchSearch = job.title.contains(query, ignoreCase = true) || job.company.contains(query, ignoreCase = true)
-        val matchSalary = extractNumericSalary(job.salary) >= minSalary
+        val salaryNum = extractNumericSalary(job.salary)
+        val matchSalary = when (salaryRange) {
+            "< 3k" -> salaryNum in 1..3000
+            "3k - 10k" -> salaryNum in 3001..10000
+            "> 10k" -> salaryNum > 10000
+            else -> true
+        }
         val matchType = if (selectedType == "All") true else job.type.equals(selectedType, ignoreCase = true)
         notFilled && matchSearch && matchSalary && matchType
     }
 
     if (filtered.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No jobs found 🧸", color = Color.White, fontWeight = FontWeight.Bold)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("No jobs found 🧸", color = Color.White, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = onResetFilters,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.8f)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Reset Filters 🔄", fontWeight = FontWeight.Bold)
+                }
+            }
         }
     } else {
         LazyColumn(contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            items(filtered) { job -> JobCard(job, savedIds.contains(job.id), viewModel, onOpenJob) }
+            items(filtered) { job -> JobCard(job, savedIds.contains(job.id), false, viewModel, onOpenJob) }
         }
     }
 }
 
 @Composable
-fun JobCard(job: Job, isSaved: Boolean, viewModel: MainViewModel, onOpenJob: (Int) -> Unit) {
+fun JobCard(job: Job, isSaved: Boolean, isClosed: Boolean = false, viewModel: MainViewModel, onOpenJob: (Int) -> Unit) {
     Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F3FF)), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -227,17 +282,29 @@ fun JobCard(job: Job, isSaved: Boolean, viewModel: MainViewModel, onOpenJob: (In
                 Surface(color = Color(0xFFE0E7FF), shape = RoundedCornerShape(8.dp)) {
                     Text(job.type, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = Color(0xFF4338CA), fontSize = 12.sp)
                 }
+                if (isClosed) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Surface(color = Color(0xFFFEE2E2), shape = RoundedCornerShape(8.dp)) {
+                        Text("Closed 🔒", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = Color(0xFFEF4444), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
             Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = { onOpenJob(job.id) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7E57C2))) {
-                Text("View Details ✨", fontWeight = FontWeight.Bold, color = Color.White)
+            Button(
+                onClick = { onOpenJob(job.id) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = if (isClosed) Color(0xFF9CA3AF) else Color(0xFF7E57C2))
+            ) {
+                Text(if (isClosed) "Position Closed 🔒" else "View Details ✨", fontWeight = FontWeight.Bold, color = Color.White)
             }
         }
     }
 }
 
 @Composable
-fun SavedTab(jobs: List<Job>, savedIds: Set<Int>, viewModel: MainViewModel, onOpenJob: (Int) -> Unit) {
+fun SavedTab(jobs: List<Job>, applications: List<JobApplication>, savedIds: Set<Int>, viewModel: MainViewModel, onOpenJob: (Int) -> Unit) {
+    val filledJobIds = applications.filter { it.status == "Approved" || it.status == "Completed" }.map { it.jobId }.toSet()
     val saved = jobs.filter { savedIds.contains(it.id) }
     Column(modifier = Modifier.padding(top = 16.dp)) {
         Text("Saved for Later 💖", fontSize = 22.sp, fontWeight = FontWeight.Black, color = Color.White)
@@ -245,21 +312,35 @@ fun SavedTab(jobs: List<Job>, savedIds: Set<Int>, viewModel: MainViewModel, onOp
         if (saved.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Your list is empty 🧺", color = Color.White.copy(alpha = 0.7f)) }
         } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) { items(saved) { job -> JobCard(job, true, viewModel, onOpenJob) } }
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                items(saved) { job ->
+                    val isClosed = job.id in filledJobIds
+                    JobCard(job, true, isClosed, viewModel, onOpenJob)
+                }
+            }
         }
     }
 }
 
 @Composable
-fun AppsTab(apps: List<JobApplication>, jobs: List<Job>, viewModel: MainViewModel, onOpenJob: (Int) -> Unit) {
-    val myApps = apps.filter { it.workerEmail == viewModel.currentUser?.email }
+fun AppsTab(
+    apps: List<JobApplication>,
+    jobs: List<Job>,
+    viewModel: MainViewModel,
+    showCompletedOnly: Boolean = false,
+    onOpenJob: (Int) -> Unit
+) {
+    val myAppsAll = apps.filter { it.workerEmail == viewModel.currentUser?.email }
+    val myApps = if (showCompletedOnly) myAppsAll.filter { it.status == "Completed" } else myAppsAll
     var applicationToCancel by remember { mutableStateOf<JobApplication?>(null) }
 
     Column(modifier = Modifier.padding(top = 16.dp)) {
-        Text("My Job 🌈", fontSize = 22.sp, fontWeight = FontWeight.Black, color = Color.White)
+        Text(if (showCompletedOnly) "Completed History 📜" else "My Applications 🌈", fontSize = 22.sp, fontWeight = FontWeight.Black, color = Color.White)
         Spacer(modifier = Modifier.height(16.dp))
         if (myApps.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No applications yet 🎈", color = Color.White.copy(alpha = 0.7f)) }
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(if (showCompletedOnly) "No completed jobs yet 🎈" else "No applications yet 🎈", color = Color.White.copy(alpha = 0.7f))
+            }
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(myApps) { app ->

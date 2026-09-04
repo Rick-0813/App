@@ -93,6 +93,7 @@ fun MyJobDetailsScreen(
     var showReviewDialog by remember { mutableStateOf(false) }
     var showApplyDialog by remember { mutableStateOf(false) }
     var showCancelDialog by remember { mutableStateOf(false) }
+    var showNeedEmailDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = AppBackground,
@@ -117,10 +118,21 @@ fun MyJobDetailsScreen(
             )
         },
         bottomBar = {
+            val isOwnJob = user?.email?.isNotBlank() == true &&
+                    job.employerEmail.equals(user?.email, ignoreCase = true)
+
             JobActionBar(
                 isEmployer = isEmployer,
+                isOwnJob = isOwnJob,
                 application = currentApplication,
-                onApply = { showApplyDialog = true },
+                onApply = {
+                    val hasValidEmail = user?.email?.contains("@") == true
+                    if (!hasValidEmail) {
+                        showNeedEmailDialog = true
+                    } else {
+                        showApplyDialog = true
+                    }
+                },
                 onWithdraw = { showCancelDialog = true }
             )
         }
@@ -152,6 +164,37 @@ fun MyJobDetailsScreen(
                 )
             }
         }
+    }
+
+    if (showNeedEmailDialog) {
+        AlertDialog(
+            onDismissRequest = { showNeedEmailDialog = false },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(22.dp),
+            title = { Text("Email Required 📧", color = Navy, fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "To apply for this job, please link your Google Account (Gmail) in Profile Settings first so employers can contact you.",
+                    color = MutedText
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showNeedEmailDialog = false
+                        onBack()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
+                ) {
+                    Text("Go to Settings ✨")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNeedEmailDialog = false }) {
+                    Text("Later", color = Color.Gray)
+                }
+            }
+        )
     }
 
     if (showApplyDialog) {
@@ -538,13 +581,20 @@ private fun EditReviewDialog(review: JobReview, onDismiss: () -> Unit, onSave: (
 }
 
 @Composable
-private fun JobActionBar(isEmployer: Boolean, application: JobApplication?, onApply: () -> Unit, onWithdraw: () -> Unit) {
+private fun JobActionBar(
+    isEmployer: Boolean,
+    isOwnJob: Boolean = false,
+    application: JobApplication?,
+    onApply: () -> Unit,
+    onWithdraw: () -> Unit
+) {
     Surface(color = AppBackground, shadowElevation = 10.dp) {
         val isRejected = application?.status == "Rejected"
         val isPending = application?.status == "Pending"
-        val canApply = !isEmployer && (application == null || isRejected)
+        val canApply = !isEmployer && !isOwnJob && (application == null || isRejected)
         val label = when {
             isEmployer -> "Employer Account • View Applications"
+            isOwnJob -> "Your Own Listing 🚫"
             application == null -> "Apply Now"
             isRejected -> "Application Rejected • Apply Again 🔄"
             application.status == "Completed" -> "Job Completed • Reviews Available"
@@ -557,12 +607,22 @@ private fun JobActionBar(isEmployer: Boolean, application: JobApplication?, onAp
                 enabled = canApply,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = if (isRejected) Color(0xFFD97706) else SuccessGreen, disabledContainerColor = if (application?.status == "Completed") SuccessGreen else SoftBlue, disabledContentColor = if (application?.status == "Completed") Color.White else DeepBlue)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isRejected) Color(0xFFD97706) else SuccessGreen,
+                    disabledContainerColor = if (isOwnJob) Color(0xFFE2E8F0) else if (application?.status == "Completed") SuccessGreen else SoftBlue,
+                    disabledContentColor = if (isOwnJob) Color(0xFF64748B) else if (application?.status == "Completed") Color.White else DeepBlue
+                )
             ) { Text(label, fontWeight = FontWeight.Bold) }
 
             if (!isEmployer && isPending) {
                 Spacer(modifier = Modifier.height(6.dp))
-                OutlinedButton(onClick = onWithdraw, modifier = Modifier.fillMaxWidth().height(44.dp), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, Color(0xFFEF4444)), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFEF4444))) {
+                OutlinedButton(
+                    onClick = onWithdraw,
+                    modifier = Modifier.fillMaxWidth().height(44.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, Color(0xFFEF4444)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFEF4444))
+                ) {
                     Text("Withdraw Application", fontWeight = FontWeight.Bold)
                 }
             }

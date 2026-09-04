@@ -83,7 +83,6 @@ fun EmployerScreen(viewModel: MainViewModel, navController: NavController) {
                 }
             },
             bottomBar = {
-                // 🚀 底部导航栏扩展为 4 个 Tab：Apps, Post, Reviews, History
                 NavigationBar(
                     containerColor = softSurface,
                     modifier = Modifier.clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
@@ -144,7 +143,6 @@ fun EmployerScreen(viewModel: MainViewModel, navController: NavController) {
     }
 }
 
-// 🚀 新增：Boss 端专属的 History 页面（按公司归类展示自己发布过和已完成的工作）
 @Composable
 fun BossHistoryTab(
     jobs: List<com.example.myapplication.Job>,
@@ -154,8 +152,6 @@ fun BossHistoryTab(
 ) {
     val currentBossEmail = viewModel.currentUser?.email ?: ""
     val myJobs = jobs.filter { it.employerEmail.equals(currentBossEmail, ignoreCase = true) }
-
-    // 按照公司名称进行分组
     val groupedByCompany = myJobs.groupBy { it.company.ifBlank { "My Company" } }
 
     Column(
@@ -192,7 +188,6 @@ fun BossHistoryTab(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         companyJobs.forEach { job ->
-                            // 查找该职位对应的申请记录
                             val jobApps = applications.filter { it.jobId == job.id }
                             val completedApp = jobApps.find { it.status == "Completed" }
 
@@ -435,6 +430,7 @@ fun PostJobTab(viewModel: MainViewModel) {
     var description by remember { mutableStateOf("") }
     var jobType by remember { mutableStateOf("Full-time") }
     var showSuccess by remember { mutableStateOf(false) }
+    var showNeedEmailDialog by remember { mutableStateOf(false) }
 
     var jobToDelete by remember { mutableStateOf<com.example.myapplication.Job?>(null) }
     var jobToEdit by remember { mutableStateOf<com.example.myapplication.Job?>(null) }
@@ -555,6 +551,12 @@ fun PostJobTab(viewModel: MainViewModel) {
 
                 Button(
                     onClick = {
+                        val hasValidEmail = currentUser?.email?.contains("@") == true
+                        if (!hasValidEmail) {
+                            showNeedEmailDialog = true
+                            return@Button
+                        }
+
                         if (title.isNotBlank() && company.isNotBlank() && rawSalary.isNotBlank()) {
                             val formattedSalary = "RM $rawSalary.00"
                             viewModel.postJob(title, company, formattedSalary, description, jobType, requirements)
@@ -574,6 +576,34 @@ fun PostJobTab(viewModel: MainViewModel) {
                     Text("Publish Now 🚀", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
                 }
             }
+        }
+
+        if (showNeedEmailDialog) {
+            AlertDialog(
+                onDismissRequest = { showNeedEmailDialog = false },
+                containerColor = Color.White,
+                shape = RoundedCornerShape(22.dp),
+                title = { Text("Email Required 📧", color = textDark, fontWeight = FontWeight.Bold) },
+                text = {
+                    Text(
+                        "To post a job, please link your Google Account (Gmail) in Profile Settings first so applicants can reach you.",
+                        color = Color(0xFF4B5563)
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showNeedEmailDialog = false },
+                        colors = ButtonDefaults.buttonColors(containerColor = primaryPurple)
+                    ) {
+                        Text("Understood")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showNeedEmailDialog = false }) {
+                        Text("Cancel", color = Color.Gray)
+                    }
+                }
+            )
         }
 
         if (myPostedJobs.isNotEmpty()) {
