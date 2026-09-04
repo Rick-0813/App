@@ -29,7 +29,11 @@ import com.example.myapplication.worker.JobSearchScreen
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
-
+import io.github.jan.supabase.postgrest.from
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 
 const val SUPABASE_URL = "https://oikfmjxtrsspyzyyicuz.supabase.co"
 const val SUPABASE_KEY = "sb_secret_rApl2aM0kkeHcqNZG0ccwQ_rEs8StaA"
