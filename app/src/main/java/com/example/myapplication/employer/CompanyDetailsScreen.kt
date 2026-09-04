@@ -179,7 +179,7 @@ fun CompanyDetailsScreen(viewModel: MainViewModel, navController: NavController)
         if (showEditDialog) {
             var editPhone by remember(user) { mutableStateOf(user?.phone ?: "") }
             var editIndustry by remember(user) { mutableStateOf(user?.industry?.ifEmpty { "Technology & Services" } ?: "Technology & Services") }
-            var expanded by remember { mutableStateOf(false) } //Control popupmenu
+            var expanded by remember { mutableStateOf(false) }
 
             val industries = listOf(
                 "Technology & Services",
@@ -239,7 +239,7 @@ fun CompanyDetailsScreen(viewModel: MainViewModel, navController: NavController)
                             OutlinedTextField(
                                 value = editIndustry,
                                 onValueChange = {},
-                                readOnly = true, // Prevents manual typing
+                                readOnly = true,
                                 label = { Text("Industry") },
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                                 modifier = Modifier

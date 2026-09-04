@@ -19,8 +19,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-
-// --- 依赖与界面导入 ---
 import com.example.myapplication.auth.LoginRegisterScreen
 import com.example.myapplication.auth.ProfileScreen
 import com.example.myapplication.auth.RoleSelectionScreen
@@ -29,15 +27,9 @@ import com.example.myapplication.employer.EmployerScreen
 import com.example.myapplication.myfeature.MyJobDetailsScreen
 import com.example.myapplication.worker.JobSearchScreen
 import com.example.myapplication.ui.theme.MyApplicationTheme
-
-// --- Supabase Imports (Practical 9) ---
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
-import io.github.jan.supabase.postgrest.from
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
+
 
 const val SUPABASE_URL = "https://oikfmjxtrsspyzyyicuz.supabase.co"
 const val SUPABASE_KEY = "sb_secret_rApl2aM0kkeHcqNZG0ccwQ_rEs8StaA"
@@ -49,7 +41,6 @@ val supabase = createSupabaseClient(
     install(Postgrest)
 }
 
-// ⚠️ 注意：User 和 UserInput 结构体已移至 MainViewModel 统一管理，此处不再重复定义，彻底杜绝 Redeclaration 报错！
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -95,7 +95,6 @@ fun RoleSelectionScreen(
                 }
             )
 
-            // 👈 橙色 Supabase 按钮已在这里被成功移除，界面更加清爽！
 
             Spacer(modifier = Modifier.weight(1f))
 
